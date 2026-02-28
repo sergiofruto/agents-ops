@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# Database
+polymarket-agent/bets.db
+
+# Env secrets
+.env
+*.env
+
+# macOS
+.DS_Store
+
+# Claude internal
+.claude/settings.local.json
