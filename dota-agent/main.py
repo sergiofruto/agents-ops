@@ -1,15 +1,16 @@
 """
-Polymarket Betting Agent — Orchestrator
-========================================
+Dota 2 Dry-Run Betting Agent — Orchestrator
+============================================
 Starts three background threads:
-  • scan_thread  — fetch markets, score, simulate bets  (every SCAN_INTERVAL_MINUTES)
-  • track_thread — poll open bets for resolution         (every TRACK_INTERVAL_MINUTES)
-  • web_thread   — Flask dashboard                       (localhost:5000)
+  • scan_thread  — fetch Dota markets, score, simulate bets  (every SCAN_INTERVAL_MINUTES)
+  • track_thread — poll open bets for resolution              (every TRACK_INTERVAL_MINUTES)
+  • web_thread   — Flask dashboard                            (localhost:5002)
 
 The main thread runs the Rich terminal dashboard (auto-refresh every second).
 Press Ctrl-C to exit.
 """
 
+import json
 import logging
 import sys
 import threading
@@ -25,6 +26,7 @@ import analyzer
 import simulator
 import tracker
 import reporter
+import opendota
 from web.app import run as run_web
 
 # ---------------------------------------------------------------------------
@@ -43,14 +45,15 @@ logger = logging.getLogger("main")
 # ---------------------------------------------------------------------------
 # Shared state (write from scan/track threads, read from dashboard)
 # ---------------------------------------------------------------------------
-_state_lock     = threading.Lock()
+_state_lock      = threading.Lock()
 _last_scan_time: str | None = None
 _next_scan_secs: int  = 0
 _next_track_secs: int = 0
+_roster_size: int     = 0
 
 
 def _update_state(**kwargs):
-    global _last_scan_time, _next_scan_secs, _next_track_secs
+    global _last_scan_time, _next_scan_secs, _next_track_secs, _roster_size
     with _state_lock:
         if "last_scan_time" in kwargs:
             _last_scan_time = kwargs["last_scan_time"]
@@ -58,11 +61,13 @@ def _update_state(**kwargs):
             _next_scan_secs = kwargs["next_scan_secs"]
         if "next_track_secs" in kwargs:
             _next_track_secs = kwargs["next_track_secs"]
+        if "roster_size" in kwargs:
+            _roster_size = kwargs["roster_size"]
 
 
-def _read_state() -> tuple[str | None, int, int]:
+def _read_state() -> tuple[str | None, int, int, int]:
     with _state_lock:
-        return _last_scan_time, _next_scan_secs, _next_track_secs
+        return _last_scan_time, _next_scan_secs, _next_track_secs, _roster_size
 
 
 # ---------------------------------------------------------------------------
@@ -71,64 +76,47 @@ def _read_state() -> tuple[str | None, int, int]:
 def _run_scan():
     logger.info("=== SCAN STARTED ===")
     try:
-        markets = fetcher.fetch_active_markets(limit=500)
-        logger.info("Fetched %d markets from Gamma API", len(markets))
+        markets = fetcher.fetch_dota_markets(limit=500)
+        logger.info("Fetched %d Dota moneyline markets", len(markets))
 
-        # Save price snapshots for stability scoring
-        for market in markets:
-            mkt_id = market.get("id", "")
-            prices = []
-            try:
-                import json
-                raw = market.get("outcomePrices", [])
-                if isinstance(raw, str):
-                    raw = json.loads(raw)
-                prices = [float(p) for p in raw]
-            except Exception:
-                pass
+        if not markets:
+            logger.info("No Dota markets found — agent idle until next scan.")
+        else:
+            # Save price snapshots
+            for market in markets:
+                mkt_id    = market.get("id", "")
+                prices    = fetcher.parse_outcome_prices(market)
+                token_ids = fetcher.parse_clob_token_ids(market)
+                for i, price in enumerate(prices):
+                    tid = token_ids[i] if i < len(token_ids) else ""
+                    database.save_price_snapshot(mkt_id, tid, price)
 
-            token_ids = []
-            try:
-                import json
-                raw = market.get("clobTokenIds", [])
-                if isinstance(raw, str):
-                    raw = json.loads(raw)
-                token_ids = [str(t) for t in raw]
-            except Exception:
-                pass
+            # Score and filter
+            candidates = analyzer.score_markets(markets)
+            logger.info("Found %d candidate(s) above score threshold", len(candidates))
 
-            for i, price in enumerate(prices):
-                tid = token_ids[i] if i < len(token_ids) else ""
-                database.save_price_snapshot(mkt_id, tid, price)
+            placed = 0
+            for candidate in candidates:
+                if placed >= config.MAX_BETS_PER_SCAN:
+                    break
+                if simulator.place_dry_bet(candidate):
+                    placed += 1
 
-        # Score and filter
-        candidates = analyzer.score_markets(markets)
-        logger.info("Found %d candidate(s) above score threshold", len(candidates))
-
-        placed = 0
-        for candidate in candidates:
-            if placed >= config.MAX_BETS_PER_SCAN:
-                break
-            # Enforce portfolio exposure limit before each bet
-            live_bankroll = database.get_live_bankroll(config.VIRTUAL_BANKROLL)
-            open_exposure = database.get_open_exposure()
-            max_exposure  = live_bankroll * config.MAX_OPEN_EXPOSURE_PCT
-            if open_exposure >= max_exposure:
-                logger.info(
-                    "Exposure limit reached ($%.0f / $%.0f max) — skipping remaining candidates",
-                    open_exposure, max_exposure,
-                )
-                break
-            if simulator.place_bet(candidate):
-                placed += 1
-
-        mode = "live" if not config.DRY_RUN else "dry-run"
-        logger.info("Placed %d %s bet(s) this scan", placed, mode)
+            logger.info("Placed %d dry bet(s) this scan", placed)
 
     except Exception as exc:
         logger.exception("Scan failed: %s", exc)
 
-    _update_state(last_scan_time=datetime.utcnow().strftime("%H:%M:%S UTC"))
+    # Prune stale price snapshots (keep last 6 h; only 2 h are ever read)
+    deleted = database.prune_price_history(keep_hours=6)
+    if deleted:
+        logger.debug("Pruned %d old price_history rows", deleted)
+
+    # Update roster size in shared state
+    _update_state(
+        last_scan_time=datetime.utcnow().strftime("%H:%M:%S UTC"),
+        roster_size=len(opendota._roster),
+    )
     logger.info("=== SCAN COMPLETE ===")
 
 
@@ -161,60 +149,18 @@ def _scheduler_thread(job_fn, interval_minutes: int, countdown_key: str):
 
 
 # ---------------------------------------------------------------------------
-# Live-mode credential validation — runs before threads start
-# ---------------------------------------------------------------------------
-def _validate_live_mode() -> None:
-    """
-    Verify all CLOB credentials are present and accepted by the exchange.
-    Calls sys.exit(1) with a clear message on any failure so the agent
-    never starts threads with broken credentials.
-    """
-    required = {
-        "POLY_PRIVATE_KEY":    config.POLY_PRIVATE_KEY,
-        "POLY_API_KEY":        config.POLY_API_KEY,
-        "POLY_API_SECRET":     config.POLY_API_SECRET,
-        "POLY_API_PASSPHRASE": config.POLY_API_PASSPHRASE,
-    }
-    missing = [name for name, val in required.items() if not val]
-    if missing:
-        logger.error(
-            "LIVE MODE — missing credentials: %s\n"
-            "  Run `python live_setup.py` to generate API keys, "
-            "then set them in .env.",
-            ", ".join(missing),
-        )
-        sys.exit(1)
-
-    logger.info("LIVE MODE — verifying CLOB credentials…")
-    try:
-        from simulator import _get_clob_client
-        client = _get_clob_client()
-        # get_api_keys() requires valid L2 auth end-to-end:
-        # private key → signature → API key/secret/passphrase validated server-side.
-        client.get_api_keys()
-        logger.info("LIVE MODE — credentials OK ✓")
-    except Exception as exc:
-        logger.error(
-            "LIVE MODE — credential check failed: %s\n"
-            "  Check POLY_PRIVATE_KEY / POLY_API_KEY / POLY_API_SECRET / "
-            "POLY_API_PASSPHRASE in .env.\n"
-            "  Re-run `python live_setup.py` if keys have expired.",
-            exc,
-        )
-        sys.exit(1)
-
-
-# ---------------------------------------------------------------------------
 # Main entry-point
 # ---------------------------------------------------------------------------
 def main():
-    mode = "LIVE" if not config.DRY_RUN else "DRY-RUN"
-    logger.info("Polymarket Agent starting… [%s]", mode)
+    logger.info("Dota 2 Dry-Run Agent starting…")
     database.init_db()
     logger.info("Database initialised at %s", config.DB_PATH)
 
-    if not config.DRY_RUN:
-        _validate_live_mode()
+    # Build OpenDota team roster before first scan
+    logger.info("Building OpenDota team roster…")
+    opendota.build_team_roster()
+    _update_state(roster_size=len(opendota._roster))
+    logger.info("Roster built: %d teams indexed", len(opendota._roster))
 
     # Scan thread
     scan_thread = threading.Thread(
@@ -224,14 +170,14 @@ def main():
         name="scan",
     )
 
-    # Track thread — uses its own schedule instance via a wrapper
+    # Track thread — uses its own schedule instance
     track_schedule = schedule.Scheduler()
 
     def _track_scheduler():
         _run_track()
         track_schedule.every(config.TRACK_INTERVAL_MINUTES).minutes.do(_run_track)
         while True:
-            next_run = track_schedule.next_run
+            next_run = track_schedule.next_run()
             if next_run:
                 remaining = max(0, int((next_run - datetime.now()).total_seconds()))
                 _update_state(next_track_secs=remaining)
@@ -265,12 +211,13 @@ def main():
     try:
         with reporter.make_live() as live:
             while True:
-                last_scan, next_scan, next_track = _read_state()
+                last_scan, next_scan, next_track, roster_size = _read_state()
                 live.update(
                     reporter.build_layout(
                         next_scan_secs=next_scan,
                         next_track_secs=next_track,
                         last_scan=last_scan,
+                        roster_size=roster_size,
                     )
                 )
                 time.sleep(1)

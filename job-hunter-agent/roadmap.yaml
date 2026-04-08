@@ -1,0 +1,87 @@
+agent:
+  id: "job-hunter-agent"
+  name: "Job Hunter"
+  path: "../job-hunter-agent"
+  entry: "main.py"
+  enabled: false            # no main.py yet — disabled until agent is built
+
+schedule:
+  frequency: "manual"       # triggered on demand, not on a cron
+  run_at: null
+  max_runtime_minutes: 15
+
+depends_on: []
+
+inputs:
+  memory_keys: []
+  upstream_outputs: []
+
+outputs:
+  - key: "jobs_assessed"
+    description: "Number of HTML files processed this run"
+    type: "int"
+  - key: "jobs_added"
+    description: "Number of new jobs added to Solaris DB"
+    type: "int"
+  - key: "top_fit_company"
+    description: "Company name with highest fit score this run"
+    type: "string"
+
+tasks:
+  # ── Profile completion ─────────────────────────────────────────────────
+  - id: "complete_profile_yaml"
+    description: "Fill in config/profile.yml — exit story, proof points, visa status, compensation"
+    status: "active"
+    priority: "high"
+    recurrent: false
+    depends_on: []
+
+  - id: "build_main_py"
+    description: "Build main.py: read HTML files from job-hunter-agent/, parse, score fit, emit outputs"
+    status: "active"
+    priority: "high"
+    recurrent: false
+    depends_on: ["complete_profile_yaml"]
+
+  # ── Active job pipeline ────────────────────────────────────────────────
+  - id: "process_splink"
+    description: "Splink — cover note drafted, added to Solaris DB. Follow up on application."
+    status: "done"
+    priority: "high"
+    recurrent: false
+    depends_on: []
+
+  - id: "process_wellfound_queue"
+    description: "Download and process remaining Wellfound HTML files in queue"
+    status: "active"
+    priority: "high"
+    recurrent: false
+    depends_on: []
+
+  # ── Agent features ─────────────────────────────────────────────────────
+  - id: "fit_scorer"
+    description: "Auto-score job fit against profile.yml: stack match, seniority, equity, remote"
+    status: "active"
+    priority: "medium"
+    recurrent: false
+    depends_on: ["build_main_py"]
+
+  - id: "cover_note_generator"
+    description: "Generate tailored cover notes from profile.yml + job details via Claude"
+    status: "active"
+    priority: "medium"
+    recurrent: false
+    depends_on: ["build_main_py"]
+
+  - id: "solaris_sync"
+    description: "Auto-insert assessed jobs into Solaris DB with fit score and status"
+    status: "active"
+    priority: "medium"
+    recurrent: false
+    depends_on: ["fit_scorer"]
+
+memory:
+  last_run: null
+  last_status: null
+  last_output: {}
+  notes: "Agent not yet built. Splink processed manually. Profile completion in progress."

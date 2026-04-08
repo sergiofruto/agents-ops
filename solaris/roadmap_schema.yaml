@@ -1,0 +1,79 @@
+# roadmap.yaml schema — reference / template
+# Place one of these in each agent directory.
+# The coordinator reads all of them at startup to build the execution DAG.
+
+# ─────────────────────────────────────────────
+# Agent identity
+# ─────────────────────────────────────────────
+agent:
+  id: "polymarket-agent"          # unique slug, used as dependency key
+  name: "Polymarket Trading Agent"
+  path: "../polymarket-agent"     # relative to solaris/ (where coordinator runs)
+  entry: "main.py"                # script the coordinator calls via subprocess
+  enabled: true                   # false = skip without error
+
+# ─────────────────────────────────────────────
+# Schedule
+# ─────────────────────────────────────────────
+schedule:
+  frequency: "daily"              # daily | hourly | manual
+  run_at: "06:00"                 # UTC, used by coordinator cron. ignored if frequency=manual
+  max_runtime_minutes: 30         # coordinator kills the process if it exceeds this
+
+# ─────────────────────────────────────────────
+# Dependencies
+# Coordinator will run all listed agents first (in their own dep order).
+# ─────────────────────────────────────────────
+depends_on: []                    # list of agent ids, e.g. ["analyst-agent"]
+
+# ─────────────────────────────────────────────
+# Inputs — what context the coordinator injects at dispatch time
+# ─────────────────────────────────────────────
+inputs:
+  memory_keys: []                 # keys from shared memory the agent needs
+  upstream_outputs: []            # output keys from dependency agents, e.g. ["analyst-agent.signals"]
+
+# ─────────────────────────────────────────────
+# Outputs — what this agent produces for downstream agents or the daily log
+# ─────────────────────────────────────────────
+outputs:
+  - key: "bets_placed"            # referenced by downstream agents via upstream_outputs
+    description: "Number of bets placed this run"
+    type: "int"
+  - key: "open_exposure"
+    description: "Current open exposure in USD"
+    type: "float"
+
+# ─────────────────────────────────────────────
+# Tasks — what this agent is working on (tracked across runs)
+# ─────────────────────────────────────────────
+tasks:
+  - id: "scan_markets"
+    description: "Fetch and score active Polymarket markets"
+    status: "active"              # active | done | blocked | skipped
+    priority: "high"              # high | medium | low
+    recurrent: true               # true = resets to active each day
+    depends_on: []                # task-level deps within this agent
+
+  - id: "track_resolutions"
+    description: "Check open bets for resolution / stop-loss / take-profit"
+    status: "active"
+    priority: "high"
+    recurrent: true
+    depends_on: ["scan_markets"]
+
+  - id: "v01_env_example"
+    description: "Create .env.example with all config vars documented"
+    status: "active"              # one-shot task — stays done once completed
+    priority: "medium"
+    recurrent: false
+    depends_on: []
+
+# ─────────────────────────────────────────────
+# Memory — agent's persistent context (written by roadmap_updater after each run)
+# ─────────────────────────────────────────────
+memory:
+  last_run: null                  # ISO timestamp, set by coordinator
+  last_status: null               # "ok" | "error" | "timeout"
+  last_output: {}                 # filled with output key/value pairs after each run
+  notes: ""                       # free-text, written by daily_log.py if relevant

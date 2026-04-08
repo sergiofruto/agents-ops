@@ -44,10 +44,19 @@ def init_db() -> None:
                 ON bets(status);
             CREATE INDEX IF NOT EXISTS idx_price_history_market_ts
                 ON price_history(market_id, timestamp);
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_bets_open_market
+                ON bets(market_id) WHERE status='open';
         """)
 
         # Auto-migration: add new columns if they don't exist yet
-        for col, typedef in [("edge", "REAL"), ("kelly_stake", "REAL DEFAULT 100")]:
+        for col, typedef in [
+            ("edge",            "REAL"),
+            ("kelly_stake",     "REAL DEFAULT 100"),
+            ("order_id",        "TEXT"),          # CLOB order ID (live mode only)
+            ("edge_available",  "INTEGER DEFAULT 0"),  # 1 if true_prob was computed
+            ("true_prob",       "REAL"),               # model-derived probability
+            ("days_to_expiry",  "INTEGER"),             # days from bet placement to close
+        ]:
             try:
                 conn.execute(f"ALTER TABLE bets ADD COLUMN {col} {typedef}")
             except sqlite3.OperationalError:
@@ -67,22 +76,28 @@ def save_bet(
     score: float,
     edge: Optional[float] = None,
     kelly_stake: float = 100.0,
+    order_id: Optional[str] = None,
+    edge_available: bool = False,
+    true_prob: Optional[float] = None,
+    days_to_expiry: Optional[int] = None,
 ) -> int:
     ts = datetime.utcnow().isoformat()
     with get_connection() as conn:
         cur = conn.execute(
             """
-            INSERT INTO bets
+            INSERT OR IGNORE INTO bets
                 (market_id, condition_id, question, outcome, outcome_index,
                  token_id, price_at_bet, virtual_amount, potential_payout,
-                 score, timestamp, status, edge, kelly_stake)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?)
+                 score, timestamp, status, edge, kelly_stake, order_id,
+                 edge_available, true_prob, days_to_expiry)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, ?)
             """,
             (market_id, condition_id, question, outcome, outcome_index,
              token_id, price_at_bet, virtual_amount, potential_payout,
-             score, ts, edge, kelly_stake),
+             score, ts, edge, kelly_stake, order_id,
+             int(edge_available), true_prob, days_to_expiry),
         )
-        return cur.lastrowid
+        return cur.lastrowid or 0  # 0 = INSERT was ignored (duplicate open market)
 
 
 def update_bet_result(bet_id: int, status: str, result_price: float) -> None:
@@ -117,6 +132,27 @@ def is_market_open(market_id: str) -> bool:
         return row is not None
 
 
+def is_market_on_cooldown(market_id: str, cooldown_days: int = 7) -> bool:
+    """Return True if this market resolved within the last `cooldown_days` days."""
+    cutoff = (datetime.utcnow() - timedelta(days=cooldown_days)).isoformat()
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM bets WHERE market_id=? AND status IN ('won','lost') AND timestamp >= ?",
+            (market_id, cutoff),
+        ).fetchone()
+        return row is not None
+
+
+def prune_price_history(days: int = 3) -> int:
+    """Delete price_history rows older than `days`. Returns number of rows deleted."""
+    cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+    with get_connection() as conn:
+        cur = conn.execute(
+            "DELETE FROM price_history WHERE timestamp < ?", (cutoff,)
+        )
+        return cur.rowcount
+
+
 def save_price_snapshot(market_id: str, token_id: str, price: float) -> None:
     ts = datetime.utcnow().isoformat()
     with get_connection() as conn:
@@ -134,6 +170,37 @@ def get_price_history(market_id: str, hours: int = 2) -> list[float]:
             (market_id, cutoff),
         ).fetchall()
     return [r["price"] for r in rows]
+
+
+def get_open_exposure() -> float:
+    """Sum of virtual_amount for all open bets."""
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT COALESCE(SUM(virtual_amount), 0) FROM bets WHERE status='open'"
+        ).fetchone()
+        return float(row[0])
+
+
+def get_live_bankroll(initial_bankroll: float) -> float:
+    """
+    Returns current bankroll = initial + realized P&L - open exposure.
+    Never falls below 10% of initial to keep Kelly from collapsing to zero.
+    """
+    with get_connection() as conn:
+        row = conn.execute(
+            """
+            SELECT
+                COALESCE(SUM(CASE WHEN status='won'  THEN potential_payout - virtual_amount ELSE 0 END), 0)
+              - COALESCE(SUM(CASE WHEN status='lost' THEN virtual_amount                   ELSE 0 END), 0)
+                AS realized_pnl,
+                COALESCE(SUM(CASE WHEN status='open' THEN virtual_amount ELSE 0 END), 0)
+                AS open_exposure
+            FROM bets
+            """
+        ).fetchone()
+
+    live = initial_bankroll + row["realized_pnl"] - row["open_exposure"]
+    return max(live, initial_bankroll * 0.10)
 
 
 def get_stats() -> dict:

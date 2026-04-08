@@ -1,0 +1,104 @@
+agent:
+  id: "analyst-agent"
+  name: "The Analyst — Intelligence Dashboard"
+  path: "../analyst-agent"
+  entry: "main.py"
+  enabled: true
+
+schedule:
+  frequency: "daily"
+  run_at: "05:30"           # run before polymarket so signals are ready
+  max_runtime_minutes: 30
+
+depends_on: []
+
+inputs:
+  memory_keys: []
+  upstream_outputs: []
+
+outputs:
+  - key: "threat_level"
+    description: "Current threat level: LOW / MEDIUM / HIGH / CRITICAL"
+    type: "string"
+  - key: "latest_brief_id"
+    description: "DB id of the latest generated brief"
+    type: "int"
+  - key: "top_cve_count"
+    description: "Number of new CVEs surfaced this scan"
+    type: "int"
+  - key: "moon_phase"
+    description: "Current moon phase label"
+    type: "string"
+
+tasks:
+  # ── Recurrent ──────────────────────────────────────────────────────────
+  - id: "intel_scan"
+    description: "Fetch CVEs, OSINT, cosmic signals; generate daily brief"
+    status: "active"
+    priority: "high"
+    recurrent: true
+    depends_on: []
+
+  # ── Current sprint: Web UI (Apr 6–12) ─────────────────────────────────
+  - id: "briefs_pages"
+    description: "Build /briefs list + /briefs/[id] detail pages in Next.js"
+    status: "active"
+    priority: "high"
+    recurrent: false
+    depends_on: []
+
+  - id: "npm_install_verify"
+    description: "npm install and verify app boots at localhost:3011"
+    status: "active"
+    priority: "high"
+    recurrent: false
+    depends_on: []
+
+  - id: "flask_api_verify"
+    description: "Verify /api/sky, /api/solar, /api/status return real data"
+    status: "active"
+    priority: "high"
+    recurrent: false
+    depends_on: ["npm_install_verify"]
+
+  - id: "star_map_render"
+    description: "Confirm canvas star map renders planets + constellation lines"
+    status: "active"
+    priority: "medium"
+    recurrent: false
+    depends_on: ["flask_api_verify"]
+
+  - id: "chat_e2e_test"
+    description: "End-to-end test: send message, get streamed Analyst response"
+    status: "active"
+    priority: "high"
+    recurrent: false
+    depends_on: ["flask_api_verify"]
+
+  - id: "solar_widget"
+    description: "Verify NOAA endpoints; X-ray gauge, Kp bar, alert pulse"
+    status: "active"
+    priority: "medium"
+    recurrent: false
+    depends_on: ["flask_api_verify"]
+
+  - id: "responsive_layout"
+    description: "Dashboard works at 1280px laptop screen"
+    status: "active"
+    priority: "low"
+    recurrent: false
+    depends_on: ["star_map_render", "solar_widget"]
+
+  # ── Phase 4 (future) ───────────────────────────────────────────────────
+  - id: "solaris_integration"
+    description: "Analyst card in Solaris + /api/analyst/brief for Good Morning"
+    status: "active"
+    priority: "low"
+    recurrent: false
+    depends_on: ["briefs_pages"]
+
+memory:
+  last_run: null
+  last_status: null
+  last_output: {}
+  notes: "Web UI sprint Apr 6-12. Flask on :5003, Next.js on :3011."

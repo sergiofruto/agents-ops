@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="60">
+  <title>Solaris Dashboard</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <style>
+    /* ── Base ─────────────────────────────────────────────────────────── */
+    body {
+      background: #07090f;
+      background-image:
+        radial-gradient(ellipse 80% 60% at 15% 10%, rgba(99,60,200,.18) 0%, transparent 55%),
+        radial-gradient(ellipse 60% 50% at 88% 18%, rgba(24,90,255,.14) 0%, transparent 55%),
+        radial-gradient(ellipse 65% 55% at 50% 92%, rgba(0,190,130,.09) 0%, transparent 55%);
+      min-height: 100vh;
+      color: #dde6f0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Glass card ───────────────────────────────────────────────────── */
+    .card {
+      background: rgba(255,255,255,0.04) !important;
+      backdrop-filter: blur(24px) saturate(160%);
+      -webkit-backdrop-filter: blur(24px) saturate(160%);
+      border: 1px solid rgba(255,255,255,0.08) !important;
+      border-radius: 16px !important;
+      box-shadow: 0 4px 32px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06);
+    }
+    .card-header {
+      background: rgba(255,255,255,0.03) !important;
+      border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+      border-radius: 16px 16px 0 0 !important;
+    }
+    .card-header:last-child { border-radius: 16px !important; }
+
+    /* ── Section headers ──────────────────────────────────────────────── */
+    .section-header { cursor: pointer; user-select: none; transition: background .15s; }
+    .section-header:hover { background: rgba(255,255,255,.05) !important; }
+    .chevron { transition: transform .2s; }
+    .collapsed .chevron { transform: rotate(-90deg); }
+
+    /* ── Solaris header bar ───────────────────────────────────────────── */
+    .solaris-header {
+      background: rgba(255,255,255,0.04);
+      backdrop-filter: blur(32px) saturate(180%);
+      -webkit-backdrop-filter: blur(32px) saturate(180%);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 20px;
+      padding: .85rem 1.4rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 20px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.07);
+    }
+
+    /* ── Weather widget ───────────────────────────────────────────────── */
+    .weather-pill {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 14px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 999px;
+      font-size: .86rem;
+      white-space: nowrap;
+    }
+    .weather-pill .w-temp { font-weight: 700; color: #e6edf3; }
+    .weather-pill .w-loc  { color: rgba(255,255,255,.38); font-size: .78rem; }
+
+    /* ── Chips ────────────────────────────────────────────────────────── */
+    .chip { display:inline-block; padding:3px 11px; border-radius:999px; font-size:.76rem; font-weight:600; letter-spacing:.01em; }
+    .badge-live { background:rgba(25,135,84,.3);   color:#75b798; border:1px solid rgba(25,135,84,.45); }
+    .badge-dry  { background:rgba(108,117,125,.22); color:#adb5bd; border:1px solid rgba(108,117,125,.38); }
+    .edge-badge { background:rgba(13,110,253,.18);  color:#6ea8fe; border:1px solid rgba(13,110,253,.32); }
+
+    /* ── Job pipeline status chips ───────────────────────────────────── */
+    .status-bookmarked { background:rgba(108,117,125,.18); color:#adb5bd; border:1px solid rgba(108,117,125,.35); }
+    .status-applied    { background:rgba(13,110,253,.16);  color:#6ea8fe; border:1px solid rgba(13,110,253,.32); }
+    .status-phone      { background:rgba(13,202,240,.16);  color:#6edff6; border:1px solid rgba(13,202,240,.32); }
+    .status-technical  { background:rgba(255,193,7,.16);   color:#ffda6a; border:1px solid rgba(255,193,7,.32);  }
+    .status-final      { background:rgba(253,126,20,.16);  color:#feb272; border:1px solid rgba(253,126,20,.32); }
+    .status-offer      { background:rgba(25,135,84,.16);   color:#75b798; border:1px solid rgba(25,135,84,.32);  }
+    .status-rejected   { background:rgba(220,53,69,.16);   color:#ea868f; border:1px solid rgba(220,53,69,.32);  }
+
+    /* ── Copy block ───────────────────────────────────────────────────── */
+    .copy-block {
+      background: rgba(15,20,35,.7);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 12px;
+      padding: 12px;
+      font-family: "SF Mono", "Cascadia Code", "Fira Code", monospace;
+      font-size: .82rem;
+      white-space: pre-wrap;
+      position: relative;
+      cursor: pointer;
+      transition: border-color .2s;
+    }
+    .copy-block:hover { border-color: rgba(88,166,255,.55); }
+    .copy-hint { position:absolute; top:6px; right:10px; font-size:.7rem; color:rgba(255,255,255,.3); }
+
+    /* ── Tables ───────────────────────────────────────────────────────── */
+    .table { --bs-table-bg: transparent !important; }
+    .table-dark {
+      --bs-table-bg: transparent !important;
+      --bs-table-striped-bg: rgba(255,255,255,.02);
+      --bs-table-color: #dde6f0;
+    }
+    .table-hover > tbody > tr:hover > * {
+      --bs-table-color-state: #e6edf3;
+      --bs-table-bg-state: rgba(255,255,255,.04);
+    }
+    th { white-space:nowrap; color:rgba(255,255,255,.38) !important; font-size:.74rem; font-weight:500; letter-spacing:.05em; text-transform:uppercase; }
+
+    /* ── Misc ─────────────────────────────────────────────────────────── */
+    .pipeline-pill { min-width:48px; text-align:center; }
+    .fng-chip  { padding:6px 18px; border-radius:999px; font-size:.95rem; font-weight:700; }
+    .sparkline { display:inline-block; vertical-align:middle; }
+
+    /* ── Buttons ──────────────────────────────────────────────────────── */
+    .btn { border-radius: 10px !important; }
+    .btn-outline-secondary {
+      border-color: rgba(255,255,255,.18) !important;
+      color: rgba(255,255,255,.55) !important;
+    }
+    .btn-outline-secondary:hover {
+      background: rgba(255,255,255,.08) !important;
+      border-color: rgba(255,255,255,.28) !important;
+      color: #e6edf3 !important;
+    }
+    .btn-outline-warning { border-radius: 999px !important; padding: 4px 15px !important; }
+
+    /* ── Form controls ────────────────────────────────────────────────── */
+    .form-control, .form-select {
+      background: rgba(255,255,255,.05) !important;
+      border: 1px solid rgba(255,255,255,.11) !important;
+      color: #dde6f0 !important;
+      border-radius: 10px !important;
+    }
+    .form-control:focus, .form-select:focus {
+      background: rgba(255,255,255,.08) !important;
+      border-color: rgba(88,166,255,.45) !important;
+      box-shadow: 0 0 0 3px rgba(88,166,255,.12) !important;
+      color: #e6edf3 !important;
+    }
+    .form-control::placeholder { color: rgba(255,255,255,.25) !important; }
+
+    /* ── Modal glass ──────────────────────────────────────────────────── */
+    .modal-content {
+      background: rgba(12,16,30,.88) !important;
+      backdrop-filter: blur(40px) saturate(180%);
+      -webkit-backdrop-filter: blur(40px) saturate(180%);
+      border: 1px solid rgba(255,255,255,.1) !important;
+      border-radius: 22px !important;
+    }
+    .modal-header { border-bottom: 1px solid rgba(255,255,255,.07) !important; }
+    .modal-footer { border-top:    1px solid rgba(255,255,255,.07) !important; }
+
+    /* ── Good Morning internals ───────────────────────────────────────── */
+    .water-cup { font-size:1.6rem; cursor:pointer; opacity:.3; transition:opacity .2s, transform .1s; user-select:none; }
+    .water-cup.filled { opacity:1; }
+    .water-cup:hover { transform:scale(1.15); }
+    .agent-status-card { border-radius:12px; padding:14px 16px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.07); }
+    .running-dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; }
+    .dot-green { background:#198754; box-shadow:0 0 7px #198754; }
+    .dot-red   { background:#dc3545; box-shadow:0 0 7px #dc3545; }
+    .task-item { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:10px 14px; }
+
+    /* ── Scrollbar ────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width:5px; height:5px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:rgba(255,255,255,.14); border-radius:3px; }
+    ::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,.24); }
+  </style>
+</head>
+<body>
+<div class="container-fluid py-3 px-4">
+
+  <!-- Header -->
+  <div class="solaris-header d-flex align-items-center gap-3 flex-wrap">
+    <div>
+      <h1 class="h4 mb-0 fw-bold" style="letter-spacing:-.025em;">☀️ Solaris</h1>
+      <div style="font-size:.76rem;color:rgba(255,255,255,.35);margin-top:2px;letter-spacing:.04em;">AGENTS · MARKETS · CAREER</div>
+    </div>
+    <div class="weather-pill ms-1" id="weather-widget" style="display:none!important;">
+      <span id="weather-icon">🌡️</span>
+      <span class="w-temp" id="weather-temp">—</span>
+      <span class="w-loc" id="weather-city"></span>
+    </div>
+    <div class="ms-auto d-flex align-items-center gap-2">
+      <span style="font-size:.74rem;color:rgba(255,255,255,.28);" id="refresh-label">Auto-refresh 60s</span>
+      <button class="btn btn-sm btn-outline-warning" id="gmBtn" onclick="openGoodMorning()">
+        ☀️ Good Morning
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SECTION 1 — AGENTS
+  ════════════════════════════════════════════════════════════════════ -->
+  <div class="card mb-3 border-secondary">
+    <div class="card-header section-header d-flex align-items-center gap-2"
+         data-bs-toggle="collapse" data-bs-target="#sec-agents">
+      <span class="fw-semibold">🤖 Agents</span>
+      <span class="ms-auto chevron">▾</span>
+    </div>
+    <div class="collapse show" id="sec-agents">
+      <div class="card-body">
+        <div class="row g-3">
+
+          <!-- Polymarket Card -->
+          <div class="col-md-6">
+            <div class="card h-100 border-secondary">
+              <div class="card-header d-flex align-items-center gap-2">
+                <span class="fw-semibold">📈 Polymarket</span>
+                {% if data.polymarket.available %}
+                  {% if data.polymarket.is_live %}
+                    <span class="chip badge-live ms-1">LIVE</span>
+                  {% else %}
+                    <span class="chip badge-dry ms-1">DRY RUN</span>
+                  {% endif %}
+                {% else %}
+                  <span class="chip badge-dry ms-1">OFFLINE</span>
+                {% endif %}
+              </div>
+              <div class="card-body">
+                {% if data.polymarket.available %}
+                  <div class="d-flex flex-wrap gap-2 mb-3">
+                    <span class="chip bg-secondary-subtle text-secondary-emphasis">Total {{ data.polymarket.total }}</span>
+                    <span class="chip bg-info-subtle text-info-emphasis">Open {{ data.polymarket.open }}</span>
+                    <span class="chip bg-success-subtle text-success-emphasis">Won {{ data.polymarket.won }}</span>
+                    <span class="chip bg-danger-subtle text-danger-emphasis">Lost {{ data.polymarket.lost }}</span>
+                    <span class="chip bg-warning-subtle text-warning-emphasis">{{ data.polymarket.win_rate }}% WR</span>
+                    <span class="chip {% if data.polymarket.pnl >= 0 %}bg-success-subtle text-success-emphasis{% else %}bg-danger-subtle text-danger-emphasis{% endif %}">
+                      P&L ${{ "%.2f"|format(data.polymarket.pnl) }}
+                    </span>
+                    <span class="chip {% if data.polymarket.roi >= 0 %}bg-success-subtle text-success-emphasis{% else %}bg-danger-subtle text-danger-emphasis{% endif %}">
+                      ROI {{ data.polymarket.roi }}%
+                    </span>
+                  </div>
+                  {% if data.polymarket.recent_bets %}
+                  <table class="table table-sm table-borderless mb-0" style="font-size:.8rem">
+                    <thead><tr>
+                      <th>Question</th><th>Outcome</th><th>Stake</th><th>Edge</th><th>Status</th>
+                    </tr></thead>
+                    <tbody>
+                    {% for b in data.polymarket.recent_bets[:3] %}
+                      <tr>
+                        <td class="text-truncate" style="max-width:180px" title="{{ b.question }}">{{ b.question[:45] }}…</td>
+                        <td>{{ b.outcome }}</td>
+                        <td>${{ "%.0f"|format(b.virtual_amount) }}</td>
+                        <td>
+                          {% if b.edge %}
+                          <span class="chip edge-badge">{{ "%.1f"|format(b.edge * 100) }}%</span>
+                          {% else %}—{% endif %}
+                        </td>
+                        <td>
+                          <span class="badge {% if b.status=='won' %}bg-success{% elif b.status=='lost' %}bg-danger{% elif b.status=='open' %}bg-info{% else %}bg-secondary{% endif %}">
+                            {{ b.status }}
+                          </span>
+                        </td>
+                      </tr>
+                    {% endfor %}
+                    </tbody>
+                  </table>
+                  {% endif %}
+                {% else %}
+                  <p class="text-muted mb-0">bets.db not found — run polymarket-agent first.</p>
+                {% endif %}
+                <a href="/polymarket" class="btn btn-sm btn-outline-secondary mt-2">View all bets →</a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dota 2 Card -->
+          <div class="col-md-6">
+            <div class="card h-100 border-secondary">
+              <div class="card-header d-flex align-items-center gap-2">
+                <span class="fw-semibold">🎮 Dota 2</span>
+                {% if data.dota.available %}
+                  <span class="chip badge-dry ms-1">DRY RUN</span>
+                {% else %}
+                  <span class="chip badge-dry ms-1">OFFLINE</span>
+                {% endif %}
+              </div>
+              <div class="card-body">
+                {% if data.dota.available %}
+                  <div class="d-flex flex-wrap gap-2 mb-3">
+                    <span class="chip bg-secondary-subtle text-secondary-emphasis">Total {{ data.dota.total }}</span>
+                    <span class="chip bg-info-subtle text-info-emphasis">Open {{ data.dota.open }}</span>
+                    <span class="chip bg-success-subtle text-success-emphasis">Won {{ data.dota.won }}</span>
+                    <span class="chip bg-danger-subtle text-danger-emphasis">Lost {{ data.dota.lost }}</span>
+                    <span class="chip bg-warning-subtle text-warning-emphasis">{{ data.dota.win_rate }}% WR</span>
+                    <span class="chip {% if data.dota.pnl >= 0 %}bg-success-subtle text-success-emphasis{% else %}bg-danger-subtle text-danger-emphasis{% endif %}">
+                      P&L ${{ "%.2f"|format(data.dota.pnl) }}
+                    </span>
+                    <span class="chip {% if data.dota.roi >= 0 %}bg-success-subtle text-success-emphasis{% else %}bg-danger-subtle text-danger-emphasis{% endif %}">
+                      ROI {{ data.dota.roi }}%
+                    </span>
+                    {% if data.dota.model_accuracy %}
+                    <span class="chip bg-primary-subtle text-primary-emphasis">Model {{ data.dota.model_accuracy }}%</span>
+                    {% endif %}
+                    {% if data.dota.elo_accuracy %}
+                    <span class="chip bg-secondary-subtle text-secondary-emphasis">Elo {{ data.dota.elo_accuracy }}%</span>
+                    {% endif %}
+                  </div>
+                  {% if data.dota.recent_bets %}
+                  <table class="table table-sm table-borderless mb-0" style="font-size:.8rem">
+                    <thead><tr>
+                      <th>Match</th><th>Outcome</th><th>Stake</th><th>Edge</th><th>Status</th>
+                    </tr></thead>
+                    <tbody>
+                    {% for b in data.dota.recent_bets[:3] %}
+                      <tr>
+                        <td class="text-truncate" style="max-width:180px">
+                          {% if b.team_a and b.team_b %}{{ b.team_a }} vs {{ b.team_b }}
+                          {% else %}{{ b.question[:40] }}…{% endif %}
+                        </td>
+                        <td>{{ b.outcome }}</td>
+                        <td>${{ "%.0f"|format(b.virtual_amount) }}</td>
+                        <td>
+                          {% if b.edge %}
+                          <span class="chip edge-badge">{{ "%.1f"|format(b.edge * 100) }}%</span>
+                          {% else %}—{% endif %}
+                        </td>
+                        <td>
+                          <span class="badge {% if b.status=='won' %}bg-success{% elif b.status=='lost' %}bg-danger{% elif b.status=='open' %}bg-info{% else %}bg-secondary{% endif %}">
+                            {{ b.status }}
+                          </span>
+                        </td>
+                      </tr>
+                    {% endfor %}
+                    </tbody>
+                  </table>
+                  {% endif %}
+                {% else %}
+                  <p class="text-muted mb-0">dota_bets.db not found — run dota-agent first.</p>
+                {% endif %}
+                <a href="/dota" class="btn btn-sm btn-outline-secondary mt-2">View all bets →</a>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /row -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SECTION 2 — MARKETS
+  ════════════════════════════════════════════════════════════════════ -->
+  <div class="card mb-3 border-secondary">
+    <div class="card-header section-header d-flex align-items-center gap-2"
+         data-bs-toggle="collapse" data-bs-target="#sec-markets">
+      <span class="fw-semibold">📊 Markets</span>
+      <span class="ms-auto chevron">▾</span>
+    </div>
+    <div class="collapse show" id="sec-markets">
+      <div class="card-body">
+        <div class="row g-3 align-items-stretch">
+
+          <!-- BTC -->
+          <div class="col-md-5">
+            <div class="card h-100 border-secondary">
+              <div class="card-body">
+                <div class="d-flex align-items-center gap-3">
+                  <div>
+                    <div class="text-muted small">Bitcoin</div>
+                    <div class="fs-3 fw-bold">
+                      {% if data.btc.price %}${{ "{:,.0f}".format(data.btc.price) }}{% else %}—{% endif %}
+                    </div>
+                    {% if data.btc.change_24h is not none %}
+                    <span class="chip {% if data.btc.change_24h >= 0 %}bg-success-subtle text-success-emphasis{% else %}bg-danger-subtle text-danger-emphasis{% endif %}">
+                      {% if data.btc.change_24h >= 0 %}+{% endif %}{{ data.btc.change_24h }}% 24h
+                    </span>
+                    {% endif %}
+                  </div>
+                  {% if data.btc.sparkline and data.btc.sparkline|length > 1 %}
+                  <div class="ms-auto">
+                    {% set sp = data.btc.sparkline %}
+                    {% set sp_min = sp|min %}
+                    {% set sp_max = sp|max %}
+                    {% set sp_range = (sp_max - sp_min) if sp_max != sp_min else 1 %}
+                    <svg class="sparkline" width="100" height="40" viewBox="0 0 100 40">
+                      <polyline fill="none" stroke="#6ea8fe" stroke-width="2"
+                        points="{% for i in range(sp|length) %}{{ (i / (sp|length - 1) * 100)|round(1) }},{{ (40 - (sp[i] - sp_min) / sp_range * 36 - 2)|round(1) }} {% endfor %}"/>
+                    </svg>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stocks -->
+          <div class="col-md-4">
+            <div class="card h-100 border-secondary">
+              <div class="card-header text-muted small">Stocks</div>
+              <div class="card-body d-flex flex-column gap-2 justify-content-center">
+                {% for s in data.stocks %}
+                <div class="d-flex justify-content-between align-items-center">
+                  <span class="fw-semibold">{{ s.ticker }}</span>
+                  <div class="d-flex gap-2 align-items-center">
+                    {% if s.price %}<span>${{ "%.2f"|format(s.price) }}</span>{% endif %}
+                    {% if s.change_pct is not none %}
+                    <span class="badge {% if s.change_pct >= 0 %}bg-success{% else %}bg-danger{% endif %}">
+                      {% if s.change_pct >= 0 %}+{% endif %}{{ s.change_pct }}%
+                    </span>
+                    {% else %}<span class="badge bg-secondary">—</span>{% endif %}
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Fear & Greed -->
+          <div class="col-md-3">
+            <div class="card h-100 border-secondary">
+              <div class="card-header text-muted small">Fear & Greed</div>
+              <div class="card-body d-flex flex-column align-items-center justify-content-center gap-2">
+                {% if data.fear_greed.value is not none %}
+                  {% set fng = data.fear_greed.value %}
+                  {% if fng < 25 %}
+                    {% set fng_color = "#dc3545" %}
+                  {% elif fng < 45 %}
+                    {% set fng_color = "#fd7e14" %}
+                  {% elif fng < 55 %}
+                    {% set fng_color = "#ffc107" %}
+                  {% elif fng < 75 %}
+                    {% set fng_color = "#9dc320" %}
+                  {% else %}
+                    {% set fng_color = "#198754" %}
+                  {% endif %}
+                  <span class="fng-chip" style="background:{{ fng_color }}22;color:{{ fng_color }};border:1px solid {{ fng_color }}55">
+                    {{ fng }}
+                  </span>
+                  <span class="text-muted small">{{ data.fear_greed.label }}</span>
+                {% else %}
+                  <span class="text-muted">Unavailable</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SECTION 3 — REBRANDING CHECKLIST
+  ════════════════════════════════════════════════════════════════════ -->
+  <div class="card mb-3 border-secondary">
+    <div class="card-header section-header d-flex align-items-center gap-2"
+         data-bs-toggle="collapse" data-bs-target="#sec-rebrand">
+      <span class="fw-semibold">🚀 Rebranding Checklist</span>
+      <span class="ms-auto chevron">▾</span>
+    </div>
+    <div class="collapse show" id="sec-rebrand">
+      <div class="card-body">
+        <div class="row g-4">
+
+          <!-- LinkedIn -->
+          <div class="col-md-4">
+            <h6 class="fw-semibold mb-3">LinkedIn / Portfolio</h6>
+            <div class="d-flex flex-column gap-2">
+              {% set li_items = [
+                ("li_1", 'Headline → "Product Engineer · AI Agent Systems · Full Stack"'),
+                ("li_2", 'Add skills: Claude API, LLM Orchestration, AI Agents, GitHub Actions'),
+                ("li_3", 'Write summary (use copy block →)'),
+                ("li_4", 'Add polymarket-agent as Featured project (with P&L metrics)'),
+                ("li_5", 'Add Solaris as Featured project'),
+              ] %}
+              {% for id, label in li_items %}
+              <div class="form-check">
+                <input class="form-check-input checklist-item" type="checkbox"
+                       id="{{ id }}" data-key="{{ id }}">
+                <label class="form-check-label small" for="{{ id }}">{{ label }}</label>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- GitHub -->
+          <div class="col-md-4">
+            <h6 class="fw-semibold mb-3">GitHub</h6>
+            <div class="d-flex flex-column gap-2">
+              {% set gh_items = [
+                ("gh_1", 'Add README + architecture diagram to polymarket-agent'),
+                ("gh_2", 'Add README + backtest results to dota-agent'),
+                ("gh_3", 'Pin 3 AI repos on profile'),
+                ("gh_4", 'Add GitHub Actions CI to one project (automated tests on PR)'),
+                ("gh_5", 'Add Claude PR review bot Action'),
+              ] %}
+              {% for id, label in gh_items %}
+              <div class="form-check">
+                <input class="form-check-input checklist-item" type="checkbox"
+                       id="{{ id }}" data-key="{{ id }}">
+                <label class="form-check-label small" for="{{ id }}">{{ label }}</label>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Copy blocks -->
+          <div class="col-md-4">
+            <h6 class="fw-semibold mb-3">Copy-Paste Positioning</h6>
+            <p class="text-muted small mb-1">Click to copy</p>
+            <div class="copy-block mb-3" onclick="copyText(this)">
+              <span class="copy-hint">click to copy</span>
+              <strong>Headline:</strong>
+"Product Engineer · AI Agent Systems · Full Stack · Auth0 / MercadoLibre alum"</div>
+            <div class="copy-block" onclick="copyText(this)">
+              <span class="copy-hint">click to copy</span>
+              <strong>Summary:</strong>
+"I build autonomous AI systems that make real decisions — from a live Polymarket trading agent with CLOB order execution and Kelly-criterion sizing, to a Dota 2 prediction model powered by Elo ratings and OpenDota data (66.6% accuracy). Previously at Auth0, Scale, and MercadoLibre. I'm a full-stack engineer who ships AI products end-to-end: model, backend, UI, and infra. Open to Product Engineer / Staff Engineer roles at AI-forward companies — $120–150k."</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       SECTION 4 — JOB TRACKER
+  ════════════════════════════════════════════════════════════════════ -->
+  <div class="card mb-3 border-secondary">
+    <div class="card-header section-header d-flex align-items-center gap-2"
+         data-bs-toggle="collapse" data-bs-target="#sec-jobs">
+      <span class="fw-semibold">💼 Job Tracker</span>
+      <span class="ms-auto chevron">▾</span>
+    </div>
+    <div class="collapse show" id="sec-jobs">
+      <div class="card-body">
+
+        <!-- Pipeline counts -->
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          {% set pipeline_colors = {
+            "bookmarked": "secondary", "applied": "primary", "phone": "info",
+            "technical": "warning", "final": "warning", "offer": "success", "rejected": "danger"
+          } %}
+          {% for stage, color in pipeline_colors.items() %}
+          <div class="text-center pipeline-pill">
+            <div class="badge bg-{{ color }} fs-6 d-block">{{ data.pipeline[stage] }}</div>
+            <div class="text-muted" style="font-size:.7rem">{{ stage|capitalize }}</div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- Target roles reference card -->
+        <div class="card border-secondary mb-3" style="background:#0d1117">
+          <div class="card-body py-2">
+            <div class="small text-muted mb-1 fw-semibold">🎯 Target Roles Reference</div>
+            <div class="row g-2 small">
+              <div class="col-md-3">
+                <span class="text-muted">Search titles:</span><br>
+                "Product Engineer", "Staff Engineer", "Senior Full Stack + AI",
+                "AI Platform Engineer", "Engineering Manager AI Products"
+              </div>
+              <div class="col-md-3">
+                <span class="text-muted">Must-have tags:</span><br>
+                AI, LLM, agents, automation, React, Node/Python, system design
+              </div>
+              <div class="col-md-3">
+                <span class="text-muted">Salary filter:</span><br>
+                $120k–$160k (US remote OK for Buenos Aires)
+              </div>
+              <div class="col-md-3">
+                <span class="text-muted">Key differentiators:</span><br>
+                Auth0 (identity at scale), MercadoLibre (LATAM scale),
+                autonomous trading agent (real money, live CLOB), 66% model accuracy
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add job form (collapsible) -->
+        <div class="mb-3">
+          <button class="btn btn-sm btn-outline-primary mb-2" type="button"
+                  data-bs-toggle="collapse" data-bs-target="#add-job-form">
+            + Add Job
+          </button>
+          <div class="collapse" id="add-job-form">
+            <div class="card card-body border-secondary">
+              <form id="jobForm" class="row g-2">
+                <div class="col-md-3">
+                  <input class="form-control form-control-sm" id="jCompany" placeholder="Company *" required>
+                </div>
+                <div class="col-md-3">
+                  <input class="form-control form-control-sm" id="jRole" placeholder="Role *" required>
+                </div>
+                <div class="col-md-3">
+                  <input class="form-control form-control-sm" id="jUrl" placeholder="URL">
+                </div>
+                <div class="col-md-1">
+                  <input class="form-control form-control-sm" id="jSalMin" type="number" placeholder="Min $k">
+                </div>
+                <div class="col-md-1">
+                  <input class="form-control form-control-sm" id="jSalMax" type="number" placeholder="Max $k">
+                </div>
+                <div class="col-md-2">
+                  <select class="form-select form-select-sm" id="jLocation">
+                    <option value="Remote" selected>Remote</option>
+                    <option value="Hybrid">Hybrid</option>
+                    <option value="Onsite">Onsite</option>
+                  </select>
+                </div>
+                <div class="col-md-2">
+                  <select class="form-select form-select-sm" id="jStatus">
+                    <option value="bookmarked" selected>Bookmarked</option>
+                    <option value="applied">Applied</option>
+                    <option value="phone">Phone Screen</option>
+                    <option value="technical">Technical</option>
+                    <option value="final">Final</option>
+                    <option value="offer">Offer</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                </div>
+                <div class="col-auto">
+                  <button class="btn btn-sm btn-primary" type="submit">Add</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- Jobs table -->
+        {% if jobs %}
+        <div class="table-responsive">
+          <table class="table table-sm table-hover align-middle" style="font-size:.82rem">
+            <thead class="table-dark">
+              <tr>
+                <th>Company</th><th>Role</th><th>Salary</th><th>Location</th>
+                <th>Status</th><th>Applied</th><th>Next Action</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="jobsTableBody">
+            {% for j in jobs %}
+              <tr id="job-row-{{ j.id }}">
+                <td><strong>{{ j.company }}</strong></td>
+                <td>{% if j.url %}<a href="{{ j.url }}" target="_blank" class="text-info text-decoration-none">{{ j.role }}</a>{% else %}{{ j.role }}{% endif %}</td>
+                <td>
+                  {% if j.salary_min or j.salary_max %}
+                    ${% if j.salary_min %}{{ j.salary_min }}k{% endif %}
+                    {% if j.salary_min and j.salary_max %}–{% endif %}
+                    {% if j.salary_max %}{{ j.salary_max }}k{% endif %}
+                  {% else %}—{% endif %}
+                </td>
+                <td>{{ j.location }}</td>
+                <td><span class="chip status-{{ j.status }}">{{ j.status }}</span></td>
+                <td>{{ j.applied_at[:10] if j.applied_at else '—' }}</td>
+                <td class="text-muted">{{ j.next_action or '—' }}</td>
+                <td>
+                  <div class="d-flex gap-1">
+                    <button class="btn btn-xs btn-outline-secondary btn-sm py-0 px-1"
+                            onclick="openEditJob({{ j.id }}, '{{ j.company|replace("'","\\'")|e }}', '{{ j.role|replace("'","\\'")|e }}', '{{ j.status }}', '{{ j.next_action or "" }}')"
+                            title="Edit">✏️</button>
+                    <button class="btn btn-xs btn-outline-info btn-sm py-0 px-1"
+                            onclick="openInterviewModal({{ j.id }}, '{{ j.company|replace("'","\\'")|e }} - {{ j.role|replace("'","\\'")|e }}')"
+                            title="Interviews">📋 {{ j.interview_count }}</button>
+                    <button class="btn btn-xs btn-outline-danger btn-sm py-0 px-1"
+                            onclick="deleteJob({{ j.id }})"
+                            title="Delete">🗑️</button>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="text-muted small">No jobs tracked yet. Add one above.</p>
+        {% endif %}
+
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     GOOD MORNING MODAL
+════════════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="gmModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content" style="background:#0d1117;border:1px solid #30363d">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title">☀️ Good Morning, Sergio!</h5>
+        <div class="ms-3 text-muted small" id="gmDate"></div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="gmBody">
+        <div class="text-center text-muted py-4">Loading…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Job Modal -->
+<div class="modal fade" id="editJobModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Job</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editJobId">
+        <div class="mb-2">
+          <label class="form-label small">Status</label>
+          <select class="form-select form-select-sm" id="editJobStatus">
+            <option value="bookmarked">Bookmarked</option>
+            <option value="applied">Applied</option>
+            <option value="phone">Phone Screen</option>
+            <option value="technical">Technical</option>
+            <option value="final">Final</option>
+            <option value="offer">Offer</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">Next Action</label>
+          <input class="form-control form-control-sm" id="editJobNextAction" placeholder="e.g. Send follow-up email">
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">Applied At</label>
+          <input class="form-control form-control-sm" id="editJobAppliedAt" type="date">
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">Notes</label>
+          <textarea class="form-control form-control-sm" id="editJobNotes" rows="3"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveEditJob()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Interviews Modal -->
+<div class="modal fade" id="interviewModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="interviewModalTitle">Interviews</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="interviewsList" class="mb-3"></div>
+        <hr>
+        <h6>Log New Stage</h6>
+        <input type="hidden" id="interviewJobId">
+        <div class="row g-2">
+          <div class="col-md-3">
+            <select class="form-select form-select-sm" id="intStage">
+              <option value="phone">Phone Screen</option>
+              <option value="technical">Technical</option>
+              <option value="system_design">System Design</option>
+              <option value="behavioral">Behavioral</option>
+              <option value="final">Final</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <input class="form-control form-control-sm" id="intDate" type="date" placeholder="Date">
+          </div>
+          <div class="col-md-4">
+            <input class="form-control form-control-sm" id="intNotes" placeholder="Notes">
+          </div>
+          <div class="col-auto">
+            <button class="btn btn-sm btn-primary" onclick="logInterview()">Log</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ── Checklist persistence ─────────────────────────────────────────────────
+document.querySelectorAll('.checklist-item').forEach(el => {
+  const key = 'solaris_check_' + el.dataset.key;
+  el.checked = localStorage.getItem(key) === '1';
+  el.addEventListener('change', () => {
+    localStorage.setItem(key, el.checked ? '1' : '0');
+  });
+});
+
+// ── Copy blocks ───────────────────────────────────────────────────────────
+function copyText(el) {
+  const hint = el.querySelector('.copy-hint');
+  const text = el.innerText.replace('click to copy', '').trim();
+  navigator.clipboard.writeText(text).then(() => {
+    hint.textContent = '✓ copied!';
+    setTimeout(() => hint.textContent = 'click to copy', 2000);
+  });
+}
+
+// ── Chevron toggle ────────────────────────────────────────────────────────
+document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(btn => {
+  const targetId = btn.getAttribute('data-bs-target');
+  const target = document.querySelector(targetId);
+  if (!target) return;
+  target.addEventListener('shown.bs.collapse', () => btn.classList.remove('collapsed'));
+  target.addEventListener('hidden.bs.collapse', () => btn.classList.add('collapsed'));
+});
+
+// ── Add Job ───────────────────────────────────────────────────────────────
+document.getElementById('jobForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const body = {
+    company:    document.getElementById('jCompany').value,
+    role:       document.getElementById('jRole').value,
+    url:        document.getElementById('jUrl').value || null,
+    salary_min: parseInt(document.getElementById('jSalMin').value) || null,
+    salary_max: parseInt(document.getElementById('jSalMax').value) || null,
+    location:   document.getElementById('jLocation').value,
+    status:     document.getElementById('jStatus').value,
+  };
+  const r = await fetch('/api/jobs', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+  if (r.ok) location.reload();
+  else alert('Error adding job');
+});
+
+// ── Edit Job ──────────────────────────────────────────────────────────────
+const editModal = new bootstrap.Modal(document.getElementById('editJobModal'));
+function openEditJob(id, company, role, status, nextAction) {
+  document.getElementById('editJobId').value = id;
+  document.getElementById('editJobStatus').value = status;
+  document.getElementById('editJobNextAction').value = nextAction;
+  editModal.show();
+}
+async function saveEditJob() {
+  const id = document.getElementById('editJobId').value;
+  const body = {
+    status:      document.getElementById('editJobStatus').value,
+    next_action: document.getElementById('editJobNextAction').value || null,
+    applied_at:  document.getElementById('editJobAppliedAt').value || null,
+    notes:       document.getElementById('editJobNotes').value || null,
+  };
+  const r = await fetch(`/api/jobs/${id}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+  if (r.ok) { editModal.hide(); location.reload(); }
+  else alert('Error updating job');
+}
+
+// ── Delete Job ────────────────────────────────────────────────────────────
+async function deleteJob(id) {
+  if (!confirm('Delete this job and all its interviews?')) return;
+  const r = await fetch(`/api/jobs/${id}`, {method:'DELETE'});
+  if (r.ok) document.getElementById('job-row-' + id)?.remove();
+  else alert('Error deleting job');
+}
+
+// ── Interviews ────────────────────────────────────────────────────────────
+const intModal = new bootstrap.Modal(document.getElementById('interviewModal'));
+async function openInterviewModal(jobId, title) {
+  document.getElementById('interviewJobId').value = jobId;
+  document.getElementById('interviewModalTitle').textContent = 'Interviews — ' + title;
+  await refreshInterviews(jobId);
+  intModal.show();
+}
+async function refreshInterviews(jobId) {
+  const r = await fetch(`/api/jobs/${jobId}/interviews`);
+  const list = await r.json();
+  const el = document.getElementById('interviewsList');
+  if (!list.length) { el.innerHTML = '<p class="text-muted small">No interviews logged yet.</p>'; return; }
+  el.innerHTML = `<table class="table table-sm"><thead><tr>
+    <th>Stage</th><th>Date</th><th>Notes</th><th>Outcome</th><th></th>
+  </tr></thead><tbody>` +
+  list.map(i => `<tr>
+    <td>${i.stage}</td>
+    <td>${i.scheduled_at || '—'}</td>
+    <td class="text-muted">${i.notes || '—'}</td>
+    <td>
+      <select class="form-select form-select-sm" style="width:110px"
+              onchange="updateInterviewOutcome(${i.id}, this.value)">
+        ${['pending','passed','failed'].map(o => `<option value="${o}"${i.outcome===o?' selected':''}>${o}</option>`).join('')}
+      </select>
+    </td>
+  </tr>`).join('') + '</tbody></table>';
+}
+async function logInterview() {
+  const jobId = document.getElementById('interviewJobId').value;
+  const body = {
+    stage: document.getElementById('intStage').value,
+    scheduled_at: document.getElementById('intDate').value || null,
+    notes: document.getElementById('intNotes').value || null,
+  };
+  const r = await fetch(`/api/jobs/${jobId}/interviews`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+  if (r.ok) { await refreshInterviews(jobId); document.getElementById('intNotes').value = ''; }
+  else alert('Error logging interview');
+}
+async function updateInterviewOutcome(id, outcome) {
+  await fetch(`/api/interviews/${id}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({outcome})});
+}
+
+// ── Motivational quotes ───────────────────────────────────────────────────
+
+const QUOTES = [
+  { text: "Ship it. Then make it better.", author: "Engineering mantra" },
+  { text: "Done is better than perfect.", author: "Sheryl Sandberg" },
+  { text: "Every model is wrong, but some are profitable.", author: "original" },
+  { text: "A prediction market is a mirror. Study your reflection.", author: "original" },
+  { text: "The best time to apply was yesterday. The second best time is now.", author: "original" },
+  { text: "Data beats intuition. Consistency beats data.", author: "original" },
+  { text: "You can't win a bet you didn't place.", author: "original" },
+  { text: "Discipline is doing it when you don't feel like it.", author: "original" },
+  { text: "Edge compounds. Stay in the game.", author: "original" },
+  { text: "The market is usually right. Find the times it isn't.", author: "original" },
+  { text: "Code is a hypothesis. Production is the experiment.", author: "original" },
+  { text: "Rejections are not failures — they're sample size.", author: "original" },
+  { text: "Sleep on it. Deploy it. Ship it.", author: "original" },
+  { text: "Your Elo is a trailing average. Play the next match.", author: "original" },
+  { text: "Calibration is the grind that looks like nothing from the outside.", author: "original" },
+  { text: "The best engineers I know treat bugs like puzzles, not emergencies.", author: "original" },
+  { text: "Luck is what happens when preparation meets opportunity.", author: "Seneca" },
+  { text: "First, solve the problem. Then, write the code.", author: "John Johnson" },
+  { text: "Make it work, make it right, make it fast.", author: "Kent Beck" },
+  { text: "In God we trust. All others must bring data.", author: "W. Edwards Deming" },
+  { text: "The only way to go fast is to go well.", author: "Robert C. Martin" },
+  { text: "Risk comes from not knowing what you're doing.", author: "Warren Buffett" },
+  { text: "It's not whether you're right or wrong, but how much you make when you're right.", author: "George Soros" },
+  { text: "Diversification is protection against ignorance.", author: "Warren Buffett" },
+  { text: "Price is what you pay. Value is what you get.", author: "Warren Buffett" },
+];
+
+function dayOfYear() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 0);
+  return Math.floor((now - start) / 86400000);
+}
+
+// ── Good Morning ─────────────────────────────────────────────────────────
+
+const gmModal = new bootstrap.Modal(document.getElementById('gmModal'));
+
+async function openGoodMorning() {
+  document.getElementById('gmBody').innerHTML = '<div class="text-center text-muted py-4">Loading…</div>';
+  gmModal.show();
+  const r = await fetch('/api/good-morning');
+  const d = await r.json();
+  document.getElementById('gmDate').textContent = d.date;
+  renderGoodMorning(d);
+}
+
+function renderGoodMorning(d) {
+  // ── Water tracker ──────────────────────────────────────────────────────
+  const today = new Date().toISOString().slice(0,10);
+  const waterKey = 'solaris_water_' + today;
+  let waterFilled = parseInt(localStorage.getItem(waterKey) || '0');
+
+  function waterHtml() {
+    let cups = '';
+    for (let i = 0; i < 8; i++) {
+      cups += `<span class="water-cup${i < waterFilled ? ' filled' : ''}" data-cup="${i}" onclick="fillWater(${i})">💧</span>`;
+    }
+    const ml = waterFilled * 250;
+    return `
+      <div class="mb-1 fw-semibold small text-info">💧 Water — ${ml}ml / 2000ml</div>
+      <div class="d-flex gap-1 mb-1">${cups}</div>
+      <div class="text-muted" style="font-size:.72rem">Tap each drop to log a glass (250ml). Resets daily.</div>
+      <div class="progress mt-2" style="height:6px">
+        <div class="progress-bar bg-info" style="width:${Math.min(waterFilled/8*100,100)}%"></div>
+      </div>
+      ${waterFilled >= 8 ? '<div class="text-success small mt-1">✅ 2L done — great job!</div>' : ''}
+    `;
+  }
+
+  window.fillWater = function(cup) {
+    waterFilled = (waterFilled === cup + 1) ? cup : cup + 1; // toggle last cup
+    localStorage.setItem(waterKey, waterFilled);
+    document.getElementById('waterSection').innerHTML = waterHtml();
+  };
+
+  // ── Agent status cards ─────────────────────────────────────────────────
+  function agentCard(name, label, emoji, running) {
+    return `
+      <div class="agent-status-card border border-secondary mb-2 d-flex align-items-center gap-3">
+        <span class="fs-4">${emoji}</span>
+        <div>
+          <div class="fw-semibold">${label}</div>
+          <div class="small">
+            <span class="running-dot ${running ? 'dot-green' : 'dot-red'}"></span>
+            ${running ? '<span class="text-success">Running</span>' : '<span class="text-danger">Stopped</span>'}
+          </div>
+        </div>
+        ${!running ? `<button class="btn btn-sm btn-outline-success ms-auto" id="start-btn-${name}" data-agent="${name}" onclick="startAgent('${name}')">▶ Start</button>` : '<span class="ms-auto text-success small" id="start-btn-' + name + '">✓ Running</span>'}
+      </div>`;
+  }
+
+  // ── Overnight summary ──────────────────────────────────────────────────
+  function overnightCard(label, emoji, stats) {
+    if (!stats.available) return `<div class="text-muted small">${emoji} ${label}: offline</div>`;
+    const pnlColor = stats.pnl >= 0 ? 'text-success' : 'text-danger';
+    const pnlSign  = stats.pnl >= 0 ? '+' : '';
+    return `
+      <div class="d-flex align-items-center gap-3 mb-2">
+        <span>${emoji} <strong>${label}</strong></span>
+        <span class="chip bg-secondary-subtle text-secondary-emphasis">${stats.new_bets} new</span>
+        <span class="chip bg-success-subtle text-success-emphasis">${stats.won} won</span>
+        <span class="chip bg-danger-subtle text-danger-emphasis">${stats.lost} lost</span>
+        <span class="chip ${stats.pnl >= 0 ? 'bg-success-subtle text-success-emphasis' : 'bg-danger-subtle text-danger-emphasis'}">${pnlSign}$${stats.pnl.toFixed(2)}</span>
+      </div>`;
+  }
+
+  // ── Tasks ──────────────────────────────────────────────────────────────
+  function tasksHtml(tasks) {
+    if (!tasks.length) return '<div class="text-success small">✅ All tasks up to date</div>';
+    return tasks.map(t => `
+      <div class="task-item d-flex align-items-center gap-3 mb-2" id="task-${t.action}-${t.agent}">
+        <span class="text-warning">⚡</span>
+        <span class="small flex-grow-1">${t.label}</span>
+        <button class="btn btn-sm btn-outline-warning" onclick="runTask('${t.agent}','${t.action}')">Run</button>
+      </div>`).join('');
+  }
+
+  document.getElementById('gmBody').innerHTML = `
+    <!-- Tasks first -->
+    <div class="mb-4">
+      <h6 class="text-warning fw-semibold mb-2">⚡ Tasks to run</h6>
+      <div id="tasksSection">${tasksHtml(d.tasks)}</div>
+    </div>
+
+    <!-- Agent status -->
+    <div class="mb-4">
+      <h6 class="fw-semibold mb-2">🤖 Agent status</h6>
+      ${agentCard('polymarket','Polymarket','📈', d.agent_status.polymarket)}
+      ${agentCard('dota','Dota 2','🎮', d.agent_status.dota)}
+    </div>
+
+    <!-- Overnight activity -->
+    <div class="mb-4">
+      <h6 class="fw-semibold mb-2">🌙 Overnight activity (since midnight UTC)</h6>
+      ${overnightCard('Polymarket','📈', d.overnight.polymarket)}
+      ${overnightCard('Dota 2','🎮', d.overnight.dota)}
+    </div>
+
+    <!-- Water tracker -->
+    <div id="waterSection">
+      ${waterHtml()}
+    </div>
+
+    <!-- Motivational quote -->
+    ${(() => {
+      const q = QUOTES[dayOfYear() % QUOTES.length];
+      return `<blockquote class="blockquote mt-4 mb-0" style="border-left:3px solid #30363d;padding-left:1rem;">
+        <p class="mb-1 fst-italic text-secondary" style="font-size:.9rem;">"${q.text}"</p>
+        <footer class="blockquote-footer mt-1" style="font-size:.75rem;">
+          <cite title="Source">${q.author}</cite>
+        </footer>
+      </blockquote>`;
+    })()}
+  `;
+}
+
+window.startAgent = async function(name) {
+  const btn = document.getElementById(`start-btn-${name}`);
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  const r = await fetch(`/api/good-morning/start/${name}`, {method:'POST'});
+  const d = await r.json();
+  if (d.ok) {
+    const card = document.getElementById(`start-btn-${name}`)?.closest('.agent-status-card');
+    if (card) {
+      card.querySelector('.running-dot').className = 'running-dot dot-green';
+      card.querySelector('.small').innerHTML = '<span class="running-dot dot-green"></span><span class="text-success">Starting…</span>';
+    }
+    const b = document.getElementById(`start-btn-${name}`);
+    if (b) { b.textContent = '✓ Launched'; b.disabled = true; b.className = 'btn btn-sm btn-success ms-auto'; }
+  } else {
+    if (btn) { btn.disabled = false; btn.textContent = '▶ Start'; }
+    alert('Failed to start: ' + (d.error || 'unknown error'));
+  }
+};
+
+window.runTask = async function(agent, action) {
+  const btn = document.querySelector(`#task-${action}-${agent} button`);
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+
+  let r;
+  if (action === 'backtest') {
+    r = await fetch('/api/good-morning/backtest', {method:'POST'});
+  } else if (action === 'start') {
+    r = await fetch(`/api/good-morning/start/${agent}`, {method:'POST'});
+  }
+  const d = await r.json();
+  const row = document.getElementById(`task-${action}-${agent}`);
+  if (d.ok && row) {
+    row.innerHTML = `<span class="text-success">✅</span><span class="small text-success flex-grow-1">${row.querySelector('.small')?.textContent || ''} — launched</span>`;
+  } else if (row) {
+    row.querySelector('button').textContent = 'Retry';
+    row.querySelector('button').disabled = false;
+  }
+};
+
+// Auto-open on first visit of the day
+(function() {
+  const today = new Date().toISOString().slice(0,10);
+  if (localStorage.getItem('solaris_gm_date') !== today) {
+    localStorage.setItem('solaris_gm_date', today);
+    setTimeout(openGoodMorning, 800);
+  }
+})();
+
+// ── Weather widget ────────────────────────────────────────────────────────
+function wmoEmoji(code) {
+  if (code === 0)          return '☀️';
+  if (code <= 2)           return '⛅';
+  if (code === 3)          return '☁️';
+  if (code <= 49)          return '🌫️';
+  if (code <= 59)          return '🌦️';
+  if (code <= 69)          return '🌧️';
+  if (code <= 79)          return '❄️';
+  if (code <= 82)          return '🌧️';
+  if (code <= 84)          return '🌨️';
+  if (code <= 99)          return '⛈️';
+  return '🌡️';
+}
+
+(async function loadWeather() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(async ({ coords: { latitude: lat, longitude: lon } }) => {
+    try {
+      const [wr, gr] = await Promise.all([
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&temperature_unit=celsius`),
+        fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`),
+      ]);
+      const wd = await wr.json();
+      const gd = await gr.json();
+      const temp = Math.round(wd.current.temperature_2m);
+      const code = wd.current.weather_code;
+      const city = gd.address?.city || gd.address?.town || gd.address?.village || gd.address?.county || '';
+      document.getElementById('weather-icon').textContent = wmoEmoji(code);
+      document.getElementById('weather-temp').textContent = `${temp}°C`;
+      document.getElementById('weather-city').textContent = city;
+      const w = document.getElementById('weather-widget');
+      w.style.removeProperty('display');
+      w.style.display = 'flex';
+    } catch(_) {}
+  }, () => {}, { timeout: 8000 });
+})();
+</script>
+</body>
+</html>

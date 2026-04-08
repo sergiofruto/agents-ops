@@ -340,9 +340,11 @@ def process_market(
     days_open = ((close_ts - start_ts) / 86400) if start_ts else 30
     days_open = max(days_open, 1)
 
-    # --- volume approximation ---
-    raw_vol = float(market.get("volumeClob") or market.get("volume") or 0)
-    volume_24h_approx = raw_vol / days_open
+    # --- volume: prefer live volume24hr field, fall back to approximation ---
+    volume_24h_approx = float(market.get("volume24hr") or market.get("volume24hrClob") or 0)
+    if volume_24h_approx <= 0:
+        raw_vol = float(market.get("volumeClob") or market.get("volume") or 0)
+        volume_24h_approx = raw_vol / days_open
 
     if volume_24h_approx < min_vol:
         return None
@@ -390,11 +392,18 @@ def process_market(
 
     # --- fetch historical entry prices for all tokens from CLOB ---
     # Final outcomePrices are settlement prices (0.99/0.01), not entry prices.
-    # We query CLOB price-history to find which outcome was in the sweet spot
-    # hours_before the close.
+    # Try hours_before first, then progressively shorter windows as fallback
+    # (CLOB history coverage is sparse for older markets).
+    fallback_offsets = [hours_before, hours_before // 2, 6, 1]
     historical_prices: list[Optional[float]] = []
     for tid in token_ids:
-        p = fetch_price_at_offset(tid, close_ts, hours_before) if tid else None
+        p = None
+        for offset in fallback_offsets:
+            if offset <= 0:
+                continue
+            p = fetch_price_at_offset(tid, close_ts, offset) if tid else None
+            if p is not None:
+                break
         historical_prices.append(p)
 
     # Find the outcome whose historical price is in the probability sweet spot
@@ -696,6 +705,67 @@ def print_report(results: list[BacktestResult], min_score: float, min_edge: floa
         "The Odds API covers upcoming events only[/dim]"
     )
 
+    # ----------------------------------------------------------------
+    # Section 5 — Signal vs No-Signal
+    # ----------------------------------------------------------------
+    with_signal    = [r for r in results if r.true_prob is not None]
+    without_signal = [r for r in results if r.true_prob is None]
+
+    sig_table = Table(
+        title="Signal vs No-Signal",
+        box=box.SIMPLE_HEAVY,
+        show_lines=False,
+        expand=True,
+    )
+    sig_table.add_column("Group",    style="cyan")
+    sig_table.add_column("Bets",     justify="right")
+    sig_table.add_column("Win%",     justify="right")
+    sig_table.add_column("P&L",      justify="right")
+    sig_table.add_column("ROI",      justify="right")
+    sig_table.add_column("Avg Edge", justify="right")
+
+    for label, subset in [("With signal", with_signal), ("No signal (fallback)", without_signal)]:
+        if not subset:
+            continue
+        s_won    = sum(1 for r in subset if r.won)
+        s_wr     = 100 * s_won / len(subset)
+        s_pnl    = sum(_pnl_for(r) for r in subset)
+        s_wager  = sum(r.kelly_stake for r in subset)
+        s_roi    = 100 * s_pnl / s_wager if s_wager else 0.0
+        edges    = [r.edge for r in subset if r.edge is not None]
+        avg_edge = f"{sum(edges)/len(edges):+.1%}" if edges else "N/A"
+        sig_table.add_row(
+            label,
+            str(len(subset)),
+            _fmt_winrate(s_wr),
+            _fmt_pnl(s_pnl),
+            Text(f"{s_roi:+.1f}%", style="bold green" if s_roi >= 0 else "bold red"),
+            avg_edge,
+        )
+
+    console.print(sig_table)
+
+    # ----------------------------------------------------------------
+    # Section 6 — Brier Score (model calibration)
+    # ----------------------------------------------------------------
+    calibrated = [r for r in results if r.true_prob is not None]
+    if calibrated:
+        brier = sum((r.true_prob - (1.0 if r.won else 0.0)) ** 2 for r in calibrated) / len(calibrated)
+        # Baseline: always predict entry_price (market price, no model)
+        brier_baseline = sum((r.entry_price - (1.0 if r.won else 0.0)) ** 2 for r in calibrated) / len(calibrated)
+        skill = 1.0 - brier / brier_baseline if brier_baseline > 0 else 0.0
+
+        brier_grid = Table.grid(expand=True, padding=(0, 2))
+        brier_grid.add_column(justify="left")
+        brier_grid.add_column(justify="right")
+        brier_grid.add_row("Bets with model prob",  str(len(calibrated)))
+        brier_grid.add_row("Brier score (model)",   Text(f"{brier:.4f}", style="bold green" if brier < brier_baseline else "bold red"))
+        brier_grid.add_row("Brier score (baseline)", f"{brier_baseline:.4f}")
+        brier_grid.add_row("Skill score",            Text(f"{skill:+.2%}", style="bold green" if skill > 0 else "bold red"))
+        brier_grid.add_row("[dim]0.0 = perfect  0.25 = random  lower is better[/dim]", "")
+
+        console.print(Panel(brier_grid, title="[bold]Model Calibration (Brier Score)[/bold]", border_style="magenta"))
+
 
 # ---------------------------------------------------------------------------
 # CLI entry point
@@ -710,6 +780,7 @@ def main() -> None:
     parser.add_argument("--min-score",    type=float, default=MIN_SCORE_DEFAULT, help=f"Override composite score threshold (default: {MIN_SCORE_DEFAULT})")
     parser.add_argument("--min-edge",     type=float, default=MIN_EDGE_DEFAULT,  help=f"Min implied edge to bet (default: {MIN_EDGE_DEFAULT}; 0 disables filter)")
     parser.add_argument("--hours-before", type=int,   default=48,               help="Hours before close used as entry point (default: 48)")
+    parser.add_argument("--min-volume",   type=float, default=500,              help="Min approx daily volume $ (default: 500; live agent uses 5000 but resolved markets lack live volume24hr)")
     args = parser.parse_args()
 
     console.rule("[bold cyan]Polymarket Backtester[/bold cyan]")
@@ -718,6 +789,7 @@ def main() -> None:
         f"Market limit: [bold]{args.limit}[/bold]   "
         f"Min score: [bold]{args.min_score}[/bold]   "
         f"Min edge: [bold]{args.min_edge:.0%}[/bold]   "
+        f"Min volume: [bold]${args.min_volume:,.0f}[/bold]   "
         f"Entry: [bold]{args.hours_before}h[/bold] before close\n"
     )
 
@@ -733,6 +805,7 @@ def main() -> None:
         hours_before=args.hours_before,
         min_score=args.min_score,
         min_edge=args.min_edge,
+        min_vol=args.min_volume,
     )
 
     console.print(f"\n[green]{len(results)} bets passed all filters.[/green]\n")

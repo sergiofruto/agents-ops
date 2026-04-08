@@ -1,7 +1,9 @@
 import logging
 import math
+import re
 import statistics
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Optional
 
 import config
@@ -23,9 +25,10 @@ class BetCandidate:
     score: float
     volume_24h: float
     spread: float
-    edge:        Optional[float] = None
-    true_prob:   Optional[float] = None
-    kelly_stake: float           = 100.0
+    edge:           Optional[float] = None
+    true_prob:      Optional[float] = None
+    kelly_stake:    float           = 100.0
+    days_to_expiry: Optional[int]   = None
 
 
 # ---------------------------------------------------------------------------
@@ -73,6 +76,107 @@ def _spread_score(spread: float) -> float:
     return max(0.0, 1.0 - spread / 0.10)
 
 
+_MONTH_NAMES = ['january','february','march','april','may','june',
+                'july','august','september','october','november','december']
+
+def _parse_days_to_expiry(close_date) -> Optional[int]:
+    """
+    Parse close_date → days until expiry.
+    Handles: ISO timestamps, 'April 30', 'by June 30, 2026', 'end of April',
+             bare years ('2028'), ordinals ('April 30th'), date ranges (uses last date).
+    """
+    if not close_date:
+        return None
+    if not isinstance(close_date, str):
+        try:
+            dt = close_date
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return max(0, (dt - datetime.now(timezone.utc)).days)
+        except Exception:
+            return None
+
+    s = close_date.strip()
+
+    # 1. ISO / RFC date: 2026-04-30T... or 2026-04-30
+    if re.search(r'\d{4}-\d{2}-\d{2}', s):
+        try:
+            dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return max(0, (dt - datetime.now(timezone.utc)).days)
+        except Exception:
+            pass
+
+    sl = s.lower()
+    now = datetime.now(timezone.utc)
+
+    # 2. Bare year: "2028" or "by 2028" → Dec 31 of that year
+    year_only = re.search(r'\b(20\d{2})\b', sl)
+    month_match = re.search(
+        r'\b(' + '|'.join(_MONTH_NAMES) + r')\b'
+        r'(?:\s+(\d{1,2})(?:st|nd|rd|th)?)?'
+        r'(?:,?\s*(20\d{2}))?',
+        sl
+    )
+
+    if month_match:
+        # Use last occurrence for date ranges ("Feb 23 – March 1")
+        all_months = list(re.finditer(
+            r'\b(' + '|'.join(_MONTH_NAMES) + r')\b'
+            r'(?:\s+(\d{1,2})(?:st|nd|rd|th)?)?'
+            r'(?:,?\s*(20\d{2}))?',
+            sl
+        ))
+        m = all_months[-1]
+        month_num = _MONTH_NAMES.index(m.group(1)) + 1
+        day  = int(m.group(2)) if m.group(2) else 28
+        year = int(m.group(3)) if m.group(3) else now.year
+        # If parsed date is in the past, assume next year
+        try:
+            dt = datetime(year, month_num, day, tzinfo=timezone.utc)
+            if dt < now and not m.group(3):
+                dt = dt.replace(year=now.year + 1)
+            return max(0, (dt - now).days)
+        except ValueError:
+            pass
+
+    if year_only and not month_match:
+        try:
+            dt = datetime(int(year_only.group(1)), 12, 31, tzinfo=timezone.utc)
+            return max(0, (dt - now).days)
+        except Exception:
+            pass
+
+    return None
+
+
+def _expiry_score(close_date) -> float:
+    """
+    Reward near-term resolution — faster capital cycle, lower variance exposure.
+
+    Score shape:
+      < 1 day  → 0.0  (too late to act / already settled)
+      1–2 days → 0.5  (very imminent, risky to enter)
+      3–30 days → 1.0 (sweet spot)
+      31–90 days → linear decay to 0.3
+      > 90 days  → 0.1 (long-dated; high variance, slow cycle)
+      unknown    → 0.4 (mild penalty)
+    """
+    days = _parse_days_to_expiry(close_date)
+    if days is None:
+        return 0.4
+    if days <= 0:
+        return 0.0
+    if days <= 2:
+        return 0.5
+    if days <= 30:
+        return 1.0
+    if days <= 90:
+        return 1.0 - 0.7 * (days - 30) / 60  # 1.0 → 0.3
+    return 0.1
+
+
 # ---------------------------------------------------------------------------
 # Main scoring function
 # ---------------------------------------------------------------------------
@@ -82,19 +186,22 @@ def _composite_score(
     volume_24h: float,
     market_id: str,
     spread: float,
-) -> tuple[float, float, float, float, float]:
-    prob_s  = _probability_score(prob)
-    vol_s   = _volume_score(volume_24h)
-    stab_s  = _stability_score(market_id)
-    spr_s   = _spread_score(spread)
+    close_date=None,
+) -> tuple[float, float, float, float, float, float]:
+    prob_s   = _probability_score(prob)
+    vol_s    = _volume_score(volume_24h)
+    stab_s   = _stability_score(market_id)
+    spr_s    = _spread_score(spread)
+    expiry_s = _expiry_score(close_date)
 
     composite = (
-        prob_s  * config.WEIGHT_PROBABILITY +
-        vol_s   * config.WEIGHT_VOLUME      +
-        stab_s  * config.WEIGHT_STABILITY   +
-        spr_s   * config.WEIGHT_SPREAD
+        prob_s   * config.WEIGHT_PROBABILITY +
+        vol_s    * config.WEIGHT_VOLUME      +
+        stab_s   * config.WEIGHT_STABILITY   +
+        spr_s    * config.WEIGHT_SPREAD      +
+        expiry_s * config.WEIGHT_EXPIRY
     )
-    return composite, prob_s, vol_s, stab_s, spr_s
+    return composite, prob_s, vol_s, stab_s, spr_s, expiry_s
 
 
 # ---------------------------------------------------------------------------
@@ -216,11 +323,20 @@ def _score_single(market: dict, candidates: list[BetCandidate]) -> None:
     if spread > config.MAX_SPREAD:
         return
 
-    # Skip if already holding an open bet on this market
+    # Skip if already holding an open bet, or recently resolved (cooldown)
     if database.is_market_open(market_id):
         return
+    if database.is_market_on_cooldown(market_id, config.MARKET_COOLDOWN_DAYS):
+        return
 
-    composite, *_ = _composite_score(best_prob, volume_24h, market_id, spread)
+    close_date = market.get("endDateIso") or market.get("endDate")
+
+    # Hard cutoff: skip very long-dated markets (low capital efficiency, high variance)
+    dte = _parse_days_to_expiry(close_date)
+    if dte is not None and dte > config.MAX_DAYS_TO_EXPIRY:
+        return
+
+    composite, *_ = _composite_score(best_prob, volume_24h, market_id, spread, close_date)
 
     if composite < config.MIN_SCORE:
         return
@@ -229,32 +345,41 @@ def _score_single(market: dict, candidates: list[BetCandidate]) -> None:
 
     # --- Implied-edge filter + Kelly sizing ---
     category = _infer_category(question)
-    edge, true_prob = compute_edge(question, category, best_prob)
+    edge, true_prob = compute_edge(question, category, best_prob, close_date)
+
+    # compute_edge returns P(affirmative event in question text).
+    # When the selected outcome is "No" we are betting on the negation,
+    # so flip true_prob and recompute edge.
+    if true_prob is not None and outcome_name.strip().lower() == "no":
+        true_prob = 1.0 - true_prob
+        edge = true_prob - best_prob
 
     if edge is not None and edge < config.MIN_EDGE:
         return  # signal available but edge too thin
 
     stake = float(config.VIRTUAL_BET_SIZE)  # fallback when signal unavailable
     if true_prob is not None:
+        live_bankroll = database.get_live_bankroll(config.VIRTUAL_BANKROLL)
         s = _calc_kelly(
             true_prob, best_prob,
-            config.VIRTUAL_BANKROLL, config.KELLY_FRACTION,
+            live_bankroll, config.KELLY_FRACTION,
             config.MIN_BET_SIZE, config.MAX_BET_SIZE,
         )
         stake = s if s > 0 else float(config.VIRTUAL_BET_SIZE)
 
     candidates.append(BetCandidate(
-        market_id    = market_id,
-        condition_id = condition_id,
-        question     = question,
-        outcome      = outcome_name,
-        outcome_index = best_idx,
-        token_id     = token_id,
-        probability  = best_prob,
-        score        = round(composite, 4),
-        volume_24h   = volume_24h,
-        spread       = spread,
-        edge         = edge,
-        true_prob    = true_prob,
-        kelly_stake  = round(stake, 2),
+        market_id      = market_id,
+        condition_id   = condition_id,
+        question       = question,
+        outcome        = outcome_name,
+        outcome_index  = best_idx,
+        token_id       = token_id,
+        probability    = best_prob,
+        score          = round(composite, 4),
+        volume_24h     = volume_24h,
+        spread         = spread,
+        edge           = edge,
+        true_prob      = true_prob,
+        kelly_stake    = round(stake, 2),
+        days_to_expiry = _parse_days_to_expiry(close_date),
     ))

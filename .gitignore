@@ -9,8 +9,17 @@ env/
 dist/
 build/
 
-# Database
-polymarket-agent/bets.db
+# Databases
+*.db
+
+# Logs
+*.log
+daily_logs/
+
+# Node
+node_modules/
+.next/
+.turbo/
 
 # Env secrets
 .env
