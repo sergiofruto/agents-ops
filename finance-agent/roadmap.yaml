@@ -1,0 +1,327 @@
+agent:
+  id: finance-agent
+  name: Personal Finance Advisor
+  path: ../finance-agent
+  entry: main.py
+  enabled: false
+
+schedule:
+  frequency: daily
+  run_at: 08:00
+  max_runtime_minutes: 30
+depends_on: []
+
+inputs:
+  memory_keys: []
+  upstream_outputs: []
+
+outputs:
+- key: net_worth_usd
+  description: Total net worth in USD across all accounts
+  type: float
+- key: monthly_savings
+  description: Actual savings this month in USD
+  type: float
+- key: savings_rate
+  description: Savings rate as percentage of income (0.0-1.0)
+  type: float
+- key: months_to_goal
+  description: Projected months remaining to reach $100k house goal
+  type: int
+- key: goal_progress_pct
+  description: Percentage progress toward $100k goal (0.0-1.0)
+  type: float
+
+# ── FINANCIAL CONTEXT ─────────────────────────────────────────────────────────
+#
+#  Profile:
+#    Income:     ~$5,500/month (software developer)
+#    Expenses:   ~$2,500/month fixed
+#      - Rent:        $700   (La Plata City)
+#      - Car ins:     $120
+#      - Medical:     $180
+#      - Internet:    $100
+#      - University:  $250   (Kinesiology, 4 years remaining)
+#      - Car gas:     $180
+#      - Dog food:    $180
+#      - Food/daily:  ~$790
+#    Savings:    ~$3,000/month
+#    No debt. Credit unavailable for ~2 years.
+#
+#  Current assets (May 2026):
+#    Wallbit (USD):       $11,000
+#    Santander AR (USD):   $5,500
+#    Polymarket:            $400
+#    IBKR:                  $500  (just funded)
+#    Total liquid:        ~$17,400
+#
+#  Goal: Buy house with patio in Argentina — target $100k
+#  Timeline at $3k/month savings: ~28 months (Aug/Sep 2028)
+#  Timeline with investments at 7% annual: ~26 months
+#
+#  Strategy:
+#    - Emergency fund: $9k in Wallbit (untouchable)
+#    - Invest surplus: IBKR → VTI (US total market ETF)
+#    - Monthly: $500 liquid buffer + $2,500 → IBKR
+#    - Track expenses via Santander PDF parser
+#    - Review strategy monthly with Claude synthesis
+# ─────────────────────────────────────────────────────────────────────────────
+
+tasks:
+
+# ── PHASE 1: CORE (Week 1) ────────────────────────────────────────────────────
+
+- id: verify_boot
+  description: >
+    pip install -r requirements.txt.
+    Fill .env: ANTHROPIC_API_KEY.
+    Run: python main.py
+    Confirm: Rich terminal dashboard renders, DB initialized,
+    web UI at localhost:5006 loads. Check agent.log for startup messages.
+  status: active
+  priority: high
+  recurrent: false
+  depends_on: []
+
+- id: database_schema
+  description: >
+    Create database.py with SQLite schema:
+      - expenses: id, date, description, amount_ars, amount_usd, category, source, raw_text
+      - bills: id, name, amount_usd, due_day, category, active, last_paid_date
+      - net_worth: id, date, wallbit_usd, santander_ars, santander_usd, ibkr_usd,
+                   polymarket_usd, other_usd, total_usd, notes
+      - goals: id, name, target_usd, monthly_contribution, created_at, notes
+      - monthly_reports: id, month (YYYY-MM), income_usd, expenses_usd, savings_usd,
+                         savings_rate, net_worth_usd, strategy_text, created_at
+    Seed initial data: house goal ($100k), all known bills, first net_worth snapshot.
+  status: active
+  priority: high
+  recurrent: false
+  depends_on:
+  - verify_boot
+
+- id: expense_parser
+  description: >
+    Create parser.py — parse Santander Argentina PDF bank statements.
+    Input: PDF file path. Output: list of expense dicts.
+    Use pdfplumber to extract text, parse transaction table rows:
+      date, comprobante, description, amount_ars, balance
+    Detect and skip: saldo inicial, saldo total, header rows.
+    Handle both pesos and dollar sections.
+    Map known merchants to categories:
+      - rappi/delivery → food_dining
+      - carnes/market/dia/supermercado → groceries
+      - appypf/combust/nafta → transport
+      - veterinaria/reino animal → pets
+      - farmacity/clinica → health
+      - google/youtube → subscriptions
+      - transferencias a campos/samora → personal_transfers
+      - uai/universidad → education
+    Write parse_statement(pdf_path) → list[dict] function.
+    Write import_statement(pdf_path) → inserts into expenses table, skips duplicates.
+  status: active
+  priority: high
+  recurrent: false
+  depends_on:
+  - database_schema
+
+- id: bill_tracker
+  description: >
+    Create tracker.py — recurring bill management.
+    Seed bills table with known fixed expenses:
+      rent $700 (due 1st), car_insurance $120 (due 5th),
+      medical $180 (due 10th), internet $100 (due 15th),
+      university $250 (due 1st), car_gas $180 (variable),
+      dog_food $180 (variable).
+    Functions:
+      get_due_soon(days=7) → bills due within N days
+      mark_paid(bill_id, date) → update last_paid_date
+      get_monthly_fixed_total() → sum of all active bills
+    In main loop: log bills due in next 7 days every morning.
+  status: active
+  priority: high
+  recurrent: false
+  depends_on:
+  - database_schema
+
+- id: goal_tracker
+  description: >
+    Create goal.py — house purchase goal tracking.
+    Functions:
+      get_current_net_worth() → sum all accounts from latest net_worth row
+      get_progress() → dict with current, target, gap, months_remaining,
+                       projected_date (at $3k/month), projected_date_invested (at 7% annual)
+      add_net_worth_snapshot(wallbit, santander_ars, santander_usd, ibkr, polymarket)
+    Initial goal: $100,000 (house with patio, Argentina)
+    Display in Rich dashboard: progress bar, months remaining, projected date.
+  status: active
+  priority: high
+  recurrent: false
+  depends_on:
+  - database_schema
+
+# ── PHASE 2: INTELLIGENCE (Week 2) ───────────────────────────────────────────
+
+- id: expense_categorizer
+  description: >
+    Add Claude-powered categorization fallback in parser.py.
+    For merchants not in the known map, call Claude Haiku with:
+      "Categorize this Argentine bank transaction: '{description}'
+       Categories: rent, transport, groceries, food_dining, health,
+       education, pets, utilities, subscriptions, investments, personal_transfers, other
+       Reply with just the category name."
+    Cache results in a local categories.json to avoid repeated API calls.
+    Rate: only call Claude for unknown merchants (< 10% of transactions).
+  status: active
+  priority: medium
+  recurrent: false
+  depends_on:
+  - expense_parser
+
+- id: strategy_engine
+  description: >
+    Create strategy.py — monthly Claude synthesis.
+    Run on 1st of each month (or on demand).
+    Gather: last month expenses by category, savings rate, net worth snapshot,
+            months to goal, any bills overdue, investment balance.
+    Build prompt for Claude Sonnet:
+      "You are a personal finance advisor for Sergio, a software developer in La Plata,
+       Argentina. Goal: buy a house for $100k. Here is last month's financial data: [data]
+       Analyze spending patterns, savings rate, progress to goal.
+       Give 3 specific actionable recommendations for this month.
+       Flag any concerning trends. Keep it direct, under 200 words."
+    Store result in monthly_reports table.
+    Display latest report in Rich dashboard.
+  status: active
+  priority: medium
+  recurrent: false
+  depends_on:
+  - expense_categorizer
+  - goal_tracker
+
+- id: exchange_rate
+  description: >
+    Add ARS/USD rate fetching to support expense conversion.
+    Use exchangerate-api.com free tier or bcra.gob.ar API.
+    Convert ARS expenses to USD equivalent for unified reporting.
+    Cache rate daily (store in config or DB).
+    Show ARS and USD columns in expense views.
+  status: active
+  priority: medium
+  recurrent: false
+  depends_on:
+  - expense_parser
+
+# ── PHASE 3: DASHBOARD (Week 3) ───────────────────────────────────────────────
+
+- id: web_dashboard
+  description: >
+    Create web/app.py Flask routes:
+      GET /api/finance/summary → net_worth, goal_progress, savings_rate, months_to_goal
+      GET /api/finance/expenses?month=YYYY-MM → expenses by category with totals
+      GET /api/finance/bills → all bills, due_soon flag
+      GET /api/finance/goal → full goal progress details
+      GET /api/finance/report/latest → latest monthly strategy report
+      POST /api/finance/networth → add manual net worth snapshot
+      POST /api/finance/bills/{id}/paid → mark bill as paid
+    Run at localhost:5006.
+  status: active
+  priority: medium
+  recurrent: false
+  depends_on:
+  - strategy_engine
+  - bill_tracker
+
+- id: solaris_integration
+  description: >
+    Add finance-agent card to Solaris dashboard.
+    In solaris/agents.py: add read_finance_summary() reading from finance.db.
+    In solaris/web/app.py: expose /api/finance/* proxying to finance-agent DB.
+    In Solaris Next.js: add FinanceCard component showing:
+      - Net worth with progress bar to $100k
+      - Months to goal
+      - This month savings rate
+      - Top 3 expense categories
+      - Latest strategy recommendation
+      - Bills due this week
+  status: active
+  priority: medium
+  recurrent: false
+  depends_on:
+  - web_dashboard
+
+# ── PHASE 4: AUTOMATION (Week 4+) ────────────────────────────────────────────
+
+- id: statement_auto_import
+  description: >
+    Watch a folder (~/Downloads or configured path) for new Santander PDFs.
+    Use watchdog library to detect new files matching pattern *Santander*.pdf.
+    Auto-import on detection, log results, notify in dashboard.
+    This eliminates manual import step — drop PDF in folder, done.
+  status: active
+  priority: low
+  recurrent: false
+  depends_on:
+  - solaris_integration
+
+- id: investment_tracker
+  description: >
+    Track IBKR portfolio value via ib_insync or manual snapshot.
+    Add ibkr_usd field to net_worth snapshots (already in schema).
+    Show unrealized gains, total invested vs current value.
+    Calculate actual return rate vs target 7%.
+    Alert if VTI position needs rebalancing (quarterly).
+  status: active
+  priority: low
+  recurrent: false
+  depends_on:
+  - solaris_integration
+
+- id: property_tracker
+  description: >
+    Track Argentine real estate listings toward the $100k goal.
+    Manual watchlist: add properties (URL, price, location, m2, notes).
+    Store in properties table: id, url, price_usd, location, m2, patio (bool),
+                               status (watching/visited/discarded), notes, added_date.
+    Show in dashboard: properties being tracked, price vs budget.
+    Helps transition from saving phase to active buying phase (2028).
+  status: active
+  priority: low
+  recurrent: false
+  depends_on:
+  - solaris_integration
+
+# ── RECURRENT ─────────────────────────────────────────────────────────────────
+
+- id: daily_check
+  description: >
+    Every morning: log net worth snapshot (manual or auto),
+    check bills due in 7 days, show savings progress.
+  status: active
+  priority: high
+  recurrent: true
+  depends_on:
+  - goal_tracker
+
+- id: monthly_report
+  description: >
+    1st of each month: parse last month's statement, run strategy engine,
+    generate Claude synthesis, update goal projection.
+  status: active
+  priority: high
+  recurrent: true
+  depends_on:
+  - strategy_engine
+
+memory:
+  last_run: null
+  last_status: never_run
+  last_output: {}
+  notes: >
+    Personal finance advisor for Sergio Fruto, La Plata Argentina.
+    Goal: $100k house with patio (~28 months at $3k/month savings).
+    Income: $5,500/month software dev. Expenses: $2,500/month fixed.
+    Strategy: $9k emergency fund (Wallbit) + invest surplus in IBKR VTI.
+    Tracks: Santander AR (PDF parser), Wallbit, IBKR, Polymarket.
+    ARS/USD conversion needed for unified reporting.
+    Port: 5006. DB: finance.db.
