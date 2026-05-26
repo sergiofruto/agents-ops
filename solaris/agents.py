@@ -182,20 +182,27 @@ def get_dota_analytics() -> dict:
 
     team_rankings = []
     roster_available = False
-    try:
-        if DOTA_AGENT_DIR not in sys.path:
-            sys.path.insert(0, DOTA_AGENT_DIR)
-        import opendota
-        roster = opendota._roster
-        if roster:
-            team_rankings = sorted(
-                [{"name": name, "elo": rating} for name, (_, rating) in roster.items()],
-                key=lambda x: x["elo"],
-                reverse=True,
-            )
-            roster_available = True
-    except Exception:
-        pass
+    conn2 = _open_ro(config.DOTA_DB)
+    if conn2 is not None:
+        try:
+            latest_at = conn2.execute(
+                "SELECT MAX(snapshot_at) FROM elo_snapshots"
+            ).fetchone()[0]
+            if latest_at:
+                rows = conn2.execute(
+                    """
+                    SELECT team_name, elo FROM elo_snapshots
+                    WHERE snapshot_at = ?
+                    ORDER BY elo DESC LIMIT 100
+                    """,
+                    (latest_at,),
+                ).fetchall()
+                team_rankings = [{"name": r["team_name"], "elo": r["elo"]} for r in rows]
+                roster_available = bool(team_rankings)
+        except Exception:
+            pass
+        finally:
+            conn2.close()
 
     return {
         "backtest_history": backtest_history,
