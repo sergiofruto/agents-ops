@@ -45,15 +45,17 @@ logger = logging.getLogger("main")
 # ---------------------------------------------------------------------------
 # Shared state (write from scan/track threads, read from dashboard)
 # ---------------------------------------------------------------------------
-_state_lock      = threading.Lock()
+_state_lock        = threading.Lock()
 _last_scan_time: str | None = None
-_next_scan_secs: int  = 0
-_next_track_secs: int = 0
-_roster_size: int     = 0
+_next_scan_secs: int   = 0
+_next_track_secs: int  = 0
+_roster_size: int      = 0
+_bets_placed_run: int  = 0   # bets placed across all scans this run
+_matches_fetched: int  = 0   # matches fetched in the last scan
 
 
 def _update_state(**kwargs):
-    global _last_scan_time, _next_scan_secs, _next_track_secs, _roster_size
+    global _last_scan_time, _next_scan_secs, _next_track_secs, _roster_size, _bets_placed_run, _matches_fetched
     with _state_lock:
         if "last_scan_time" in kwargs:
             _last_scan_time = kwargs["last_scan_time"]
@@ -63,6 +65,10 @@ def _update_state(**kwargs):
             _next_track_secs = kwargs["next_track_secs"]
         if "roster_size" in kwargs:
             _roster_size = kwargs["roster_size"]
+        if "bets_placed_delta" in kwargs:
+            _bets_placed_run += kwargs["bets_placed_delta"]
+        if "matches_fetched" in kwargs:
+            _matches_fetched = kwargs["matches_fetched"]
 
 
 def _read_state() -> tuple[str | None, int, int, int]:
@@ -103,6 +109,7 @@ def _run_scan():
                     placed += 1
 
             logger.info("Placed %d dry bet(s) this scan", placed)
+            _update_state(bets_placed_delta=placed, matches_fetched=len(markets))
 
     except Exception as exc:
         logger.exception("Scan failed: %s", exc)
@@ -149,6 +156,33 @@ def _scheduler_thread(job_fn, interval_minutes: int, countdown_key: str):
 
 
 # ---------------------------------------------------------------------------
+# Coordinator outputs
+# ---------------------------------------------------------------------------
+def _emit_coordinator_outputs() -> None:
+    """Print __coordinator_outputs__ JSON to stdout for the Solaris coordinator."""
+    try:
+        stats = database.get_stats()
+        with _state_lock:
+            bets_placed = _bets_placed_run
+            matches     = _matches_fetched
+
+        resolved = stats.get("resolved", 0)
+        won      = stats.get("won", 0)
+        win_rate = round(won / resolved, 4) if resolved > 0 else 0.0
+
+        outputs = {
+            "bets_placed":     bets_placed,
+            "open_bets":       stats.get("open", 0),
+            "win_rate":        win_rate,
+            "matches_fetched": matches,
+        }
+        print("__coordinator_outputs__ " + json.dumps(outputs), flush=True)
+        logger.info("Coordinator outputs emitted: %s", outputs)
+    except Exception as exc:
+        logger.warning("Failed to emit coordinator outputs: %s", exc)
+
+
+# ---------------------------------------------------------------------------
 # Main entry-point
 # ---------------------------------------------------------------------------
 def main():
@@ -161,6 +195,8 @@ def main():
     opendota.build_team_roster()
     _update_state(roster_size=len(opendota._roster))
     logger.info("Roster built: %d teams indexed", len(opendota._roster))
+    saved = database.save_elo_snapshot(opendota._roster)
+    logger.info("ELO snapshot saved: %d teams persisted to DB", saved)
 
     # Scan thread
     scan_thread = threading.Thread(
@@ -177,7 +213,7 @@ def main():
         _run_track()
         track_schedule.every(config.TRACK_INTERVAL_MINUTES).minutes.do(_run_track)
         while True:
-            next_run = track_schedule.next_run()
+            next_run = track_schedule.next_run
             if next_run:
                 remaining = max(0, int((next_run - datetime.now()).total_seconds()))
                 _update_state(next_track_secs=remaining)
@@ -224,6 +260,8 @@ def main():
     except KeyboardInterrupt:
         logger.info("Shutting down — goodbye.")
         print("\nAgent stopped.")
+    finally:
+        _emit_coordinator_outputs()
 
 
 if __name__ == "__main__":

@@ -51,4 +51,4 @@ DRY_RUN = os.getenv("DRY_RUN", "true").lower() == "true"
 
 # Web server
 WEB_HOST = "0.0.0.0"
-WEB_PORT = 5002
+WEB_PORT = int(os.getenv("WEB_PORT", "5004"))

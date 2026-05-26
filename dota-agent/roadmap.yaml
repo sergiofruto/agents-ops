@@ -1,82 +1,82 @@
 agent:
-  id: "dota-agent"
-  name: "Dota 2 Betting Simulation Agent"
-  path: "../dota-agent"
-  entry: "main.py"
+  id: dota-agent
+  name: Dota 2 Betting Simulation Agent
+  path: ../dota-agent
+  entry: main.py
   enabled: true
-
 schedule:
-  frequency: "daily"
-  run_at: "07:00"
+  frequency: daily
+  run_at: 07:00
   max_runtime_minutes: 30
-
 depends_on: []
-
 inputs:
   memory_keys: []
   upstream_outputs: []
-
 outputs:
-  - key: "bets_placed"
-    description: "Number of new simulated bets placed this scan"
-    type: "int"
-  - key: "open_bets"
-    description: "Number of currently open simulated bets"
-    type: "int"
-  - key: "win_rate"
-    description: "Historical win rate as a float (0.0–1.0)"
-    type: "float"
-  - key: "matches_fetched"
-    description: "Number of matches fetched from OpenDota this cycle"
-    type: "int"
-
+- key: bets_placed
+  description: Number of new simulated bets placed this scan
+  type: int
+- key: open_bets
+  description: Number of currently open simulated bets
+  type: int
+- key: win_rate
+  description: Historical win rate as a float (0.0–1.0)
+  type: float
+- key: matches_fetched
+  description: Number of matches fetched from OpenDota this cycle
+  type: int
 tasks:
-  # ── Recurrent ──────────────────────────────────────────────────────────
-  - id: "fetch_matches"
-    description: "Fetch recent pro matches from OpenDota API"
-    status: "active"
-    priority: "high"
-    recurrent: true
-    depends_on: []
-
-  - id: "analyze_and_bet"
-    description: "Score matches, apply edge filter, place qualifying simulated bets"
-    status: "active"
-    priority: "high"
-    recurrent: true
-    depends_on: ["fetch_matches"]
-
-  - id: "track_results"
-    description: "Check open simulated bets for match outcomes and settle"
-    status: "active"
-    priority: "high"
-    recurrent: true
-    depends_on: []
-
-  # ── One-shot improvements ──────────────────────────────────────────────
-  - id: "add_roadmap"
-    description: "Add this roadmap.yaml — coordinator integration"
-    status: "done"
-    priority: "high"
-    recurrent: false
-    depends_on: []
-
-  - id: "coordinator_outputs"
-    description: "Emit __coordinator_outputs__ JSON at end of main.py run"
-    status: "active"
-    priority: "medium"
-    recurrent: false
-    depends_on: []
-
-  - id: "elo_tracker"
-    description: "Build ELO ranking tracker for pro teams — feed into bet scoring"
-    status: "active"
-    priority: "medium"
-    recurrent: false
-    depends_on: []
-
+- id: fetch_matches
+  description: Fetch recent pro matches from OpenDota API
+  status: active
+  priority: high
+  recurrent: true
+  depends_on: []
+- id: analyze_and_bet
+  description: Score matches, apply edge filter, place qualifying simulated bets
+  status: active
+  priority: high
+  recurrent: true
+  depends_on:
+  - fetch_matches
+- id: track_results
+  description: Check open simulated bets for match outcomes and settle
+  status: active
+  priority: high
+  recurrent: true
+  depends_on: []
+- id: add_roadmap
+  description: Add this roadmap.yaml — coordinator integration
+  status: done
+  priority: high
+  recurrent: false
+  depends_on: []
+- id: coordinator_outputs
+  description: Emit __coordinator_outputs__ JSON at end of main.py run
+  status: done
+  priority: medium
+  recurrent: false
+  depends_on: []
+- id: elo_tracker
+  description: Build ELO ranking tracker for pro teams — feed into bet scoring
+  status: done
+  priority: medium
+  recurrent: false
+  depends_on: []
+- id: nothing_ui
+  description: Apply Nothing design system to Dota web UI at port 5004
+  status: done
+  priority: low
+  recurrent: false
+  depends_on: []
 memory:
-  last_run: null
-  last_status: null
-  last_output: {}
-  notes: "Simulation-only agent. dota_bets.db tracked in Solaris dashboard."
+  last_run: '2026-04-10T13:09:36+00:00'
+  last_status: running
+  last_output:
+    bets_placed: 0
+    open_bets: 0
+    matches_fetched: 3
+  notes: >
+    Running on port 5004. 3 Dota markets found — all prices outside [60%, 85%]
+    window. No bets yet, watching. ELO snapshot DB + Nothing UI shipped.
+    All non-recurrent tasks done.

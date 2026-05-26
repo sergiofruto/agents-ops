@@ -59,6 +59,12 @@ def api_backtest():
     return jsonify({"summary": s, "matches": matches})
 
 
+@app.route("/api/elo")
+def api_elo():
+    rankings = database.get_latest_elo_rankings(limit=100)
+    return jsonify({"rankings": rankings, "count": len(rankings)})
+
+
 def run(host: str = "0.0.0.0", port: int = 5002) -> None:
     app.run(host=host, port=port, debug=False, use_reloader=False)
 

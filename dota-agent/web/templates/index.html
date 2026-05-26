@@ -4,279 +4,473 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta http-equiv="refresh" content="60" />
-  <title>Dota 2 Dry-Run Agent</title>
-  <link
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
-    rel="stylesheet"
-  />
+  <title>Dota 2 Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Doto:wght@400;700&family=Space+Grotesk:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
   <style>
-    body { background: #0d1117; color: #c9d1d9; }
-    .card { background: #161b22; border: 1px solid #30363d; }
-    .card-header { background: #21262d; border-bottom: 1px solid #30363d; }
-    table { color: #c9d1d9; }
-    thead th { border-color: #30363d; background: #21262d; color: #8b949e; font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; }
-    td { border-color: #21262d !important; font-size: .875rem; vertical-align: middle; }
-    .badge-open   { background: #d29922; }
-    .badge-won    { background: #238636; }
-    .badge-lost   { background: #da3633; }
-    .badge-void   { background: #6e7681; }
-    .badge-tier-premium      { background: #1f6feb; }
-    .badge-tier-professional { background: #388bfd; }
-    .badge-tier-amateur      { background: #6e7681; }
-    .badge-tier-unknown      { background: #30363d; }
-    .stat-value   { font-size: 1.6rem; font-weight: 700; color: #ffffff; }
-    .pnl-pos      { color: #3fb950; }
-    .pnl-neg      { color: #f85149; }
-    .refresh-note { font-size: .75rem; color: #8b949e; }
-    a             { color: #58a6ff; }
+    /* ── Tokens ──────────────────────────────────────────────────── */
+    :root {
+      --black:          #000000;
+      --surface:        #111111;
+      --surface-raised: #1A1A1A;
+      --border:         #222222;
+      --border-visible: #333333;
+      --text-disabled:  #666666;
+      --text-secondary: #999999;
+      --text-primary:   #E8E8E8;
+      --text-display:   #FFFFFF;
+      --accent:         #D71921;
+      --success:        #4A9E5C;
+      --warning:        #D4A843;
+      --interactive:    #5B9BF6;
+      --font-mono: "Space Mono", "JetBrains Mono", monospace;
+      --font-sans: "Space Grotesk", system-ui, sans-serif;
+      --font-display: "Doto", "Space Mono", monospace;
+    }
+
+    /* ── Reset ───────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; }
+    body {
+      background: var(--black);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    a { color: var(--interactive); text-decoration: none; }
+    a:hover { color: var(--text-display); }
+
+    /* ── Label utility ───────────────────────────────────────────── */
+    .label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: var(--text-disabled);
+      text-transform: uppercase;
+    }
+
+    /* ── Card ────────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .card-header .label { color: var(--text-secondary); }
+    .card-body { padding: 20px; }
+
+    /* ── Navbar ──────────────────────────────────────────────────── */
+    .navbar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 32px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .navbar-title {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      letter-spacing: 0.1em;
+      color: var(--text-display);
+      text-transform: uppercase;
+    }
+    .badge {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border-visible);
+      color: var(--text-secondary);
+    }
+    .badge-dry { border-color: var(--success); color: var(--success); }
+    .badge-live { border-color: var(--accent); color: var(--accent); }
+    .navbar-meta {
+      margin-left: auto;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-disabled);
+    }
+
+    /* ── Stat grid ───────────────────────────────────────────────── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 900px) { .stat-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 500px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .stat-value {
+      font-family: var(--font-mono);
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text-display);
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+    .stat-value.pos { color: var(--success); }
+    .stat-value.neg { color: var(--accent); }
+    .stat-value.warn { color: var(--warning); }
+
+    /* ── Section spacing ─────────────────────────────────────────── */
+    .section { margin-bottom: 24px; }
+
+    /* ── Table ───────────────────────────────────────────────────── */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-disabled);
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    thead th.r { text-align: right; }
+    thead th.c { text-align: center; }
+    tbody tr { border-bottom: 1px solid var(--border); }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface-raised); }
+    td {
+      padding: 10px 12px;
+      font-size: 13px;
+      color: var(--text-primary);
+      vertical-align: middle;
+    }
+    td.r { text-align: right; font-family: var(--font-mono); font-size: 12px; }
+    td.c { text-align: center; }
+    td.muted { color: var(--text-disabled); font-size: 12px; font-family: var(--font-mono); }
+    td.mono { font-family: var(--font-mono); font-size: 12px; }
+
+    /* ── Status pill ─────────────────────────────────────────────── */
+    .pill {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid;
+    }
+    .pill-open  { color: var(--warning);    border-color: var(--warning);    }
+    .pill-won   { color: var(--success);    border-color: var(--success);    }
+    .pill-lost  { color: var(--accent);     border-color: var(--accent);     }
+    .pill-void  { color: var(--text-disabled); border-color: var(--border-visible); }
+
+    .pill-prem  { color: var(--interactive); border-color: var(--interactive); }
+    .pill-prof  { color: var(--text-secondary); border-color: var(--border-visible); }
+    .pill-amat  { color: var(--text-disabled); border-color: var(--border); }
+    .pill-unkn  { color: var(--text-disabled); border-color: var(--border); }
+
+    /* ── Value colors ────────────────────────────────────────────── */
+    .pos  { color: var(--success); }
+    .neg  { color: var(--accent);  }
+    .dim  { color: var(--text-disabled); }
+
+    /* ── Empty state ─────────────────────────────────────────────── */
+    .empty {
+      padding: 48px 24px;
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-disabled);
+    }
+
+    /* ── Footer ──────────────────────────────────────────────────── */
+    .footer {
+      margin-top: 32px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 16px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-disabled);
+    }
+
+    /* ── Correct/incorrect indicator ─────────────────────────────── */
+    .correct   { color: var(--success); font-family: var(--font-mono); font-size: 12px; }
+    .incorrect { color: var(--accent);  font-family: var(--font-mono); font-size: 12px; }
   </style>
 </head>
 <body>
-<div class="container-fluid py-4">
 
-  <!-- Header -->
-  <div class="d-flex align-items-center mb-4 gap-3">
-    <h1 class="h4 mb-0">Dota 2 Dry-Run Agent</h1>
-    <span class="badge bg-success">DRY RUN</span>
-    <span class="badge bg-primary ms-1">Polymarket + OpenDota</span>
-    <span class="refresh-note ms-auto">Auto-refreshes every 60 s</span>
+  <!-- ── Navbar ───────────────────────────────────────────────────── -->
+  <div class="navbar">
+    <span class="navbar-title">Dota 2 Agent</span>
+    <span class="badge badge-dry">Dry Run</span>
+    <span class="badge">Polymarket + OpenDota</span>
+    <span class="navbar-meta">Auto-refresh 60s</span>
   </div>
 
-  <!-- Stat cards -->
-  <div class="row g-3 mb-4">
-    {% set cards = [
-      ("Total Bets",  stats.total,          ""),
-      ("Open",        stats.open,           ""),
-      ("Won / Lost",  stats.won ~ " / " ~ stats.lost, ""),
-      ("Win Rate",    stats.win_rate ~ "%", ""),
-      ("P&L",         ("$%+.2f" | format(stats.pnl)), "pnl"),
-      ("ROI",         ("%+.1f%%" | format(stats.roi)), "roi"),
-    ] %}
-    {% for label, value, kind in cards %}
-    <div class="col-6 col-md-4 col-lg-2">
-      <div class="card h-100 text-center py-3 px-2">
-        <div class="text-white small mb-1">{{ label }}</div>
-        <div class="stat-value
-          {% if kind == 'pnl' %}{{ 'pnl-pos' if stats.pnl >= 0 else 'pnl-neg' }}
-          {% elif kind == 'roi' %}{{ 'pnl-pos' if stats.roi >= 0 else 'pnl-neg' }}{% endif %}
-        ">{{ value }}</div>
+  <!-- ── Stat cards ───────────────────────────────────────────────── -->
+  <div class="stat-grid">
+    <div class="stat-card">
+      <span class="label">Total</span>
+      <span class="stat-value">{{ stats.total }}</span>
+    </div>
+    <div class="stat-card">
+      <span class="label">Open</span>
+      <span class="stat-value warn">{{ stats.open }}</span>
+    </div>
+    <div class="stat-card">
+      <span class="label">Won / Lost</span>
+      <span class="stat-value">{{ stats.won }}<span style="color:var(--text-disabled);font-size:16px"> / </span>{{ stats.lost }}</span>
+    </div>
+    <div class="stat-card">
+      <span class="label">Win Rate</span>
+      <span class="stat-value {{ 'pos' if stats.win_rate >= 50 else 'neg' if stats.resolved > 0 else '' }}">{{ stats.win_rate }}%</span>
+    </div>
+    <div class="stat-card">
+      <span class="label">P&amp;L</span>
+      <span class="stat-value {{ 'pos' if stats.pnl >= 0 else 'neg' }}">${{ "%+.2f" | format(stats.pnl) }}</span>
+    </div>
+    <div class="stat-card">
+      <span class="label">ROI</span>
+      <span class="stat-value {{ 'pos' if stats.roi >= 0 else 'neg' }}">{{ "%+.1f" | format(stats.roi) }}%</span>
+    </div>
+  </div>
+
+  <!-- ── Bets ─────────────────────────────────────────────────────── -->
+  <div class="section card">
+    <div class="card-header">
+      <span class="label">Bets</span>
+      <span class="label">{{ bets | length }} total</span>
+    </div>
+    {% if bets %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Match</th>
+            <th>Outcome</th>
+            <th>Status</th>
+            <th>Tier</th>
+            <th class="r">Mkt %</th>
+            <th class="r">True %</th>
+            <th class="r">Edge</th>
+            <th class="r">Form A/B</th>
+            <th class="r">H2H</th>
+            <th class="r">Score</th>
+            <th class="r">Stake</th>
+            <th class="r">Payout</th>
+            <th class="r">Result</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for bet in bets %}
+          <tr>
+            <td class="muted">{{ bet.id }}</td>
+            <td>
+              {% if bet.team_a and bet.team_b %}
+                <span style="color:var(--text-display);font-weight:500">{{ bet.team_a }}</span>
+                <span class="dim"> vs </span>
+                <span style="color:var(--text-display);font-weight:500">{{ bet.team_b }}</span>
+              {% else %}
+                {{ bet.question[:55] }}{% if bet.question|length > 55 %}…{% endif %}
+              {% endif %}
+            </td>
+            <td>{{ bet.outcome }}</td>
+            <td>
+              <span class="pill pill-{{ bet.status }}">{{ bet.status }}</span>
+            </td>
+            <td>
+              {% set tier = bet.league_tier or 'unknown' %}
+              {% if tier == 'premium' %}<span class="pill pill-prem">PREM</span>
+              {% elif tier == 'professional' %}<span class="pill pill-prof">PRO</span>
+              {% elif tier == 'amateur' %}<span class="pill pill-amat">AMAT</span>
+              {% else %}<span class="pill pill-unkn">—</span>{% endif %}
+            </td>
+            <td class="r">{{ "%.1f%%"|format(bet.price_at_bet * 100) }}</td>
+            <td class="r">
+              {% if bet.true_prob is not none %}{{ "%.1f%%"|format(bet.true_prob * 100) }}
+              {% else %}<span class="dim">—</span>{% endif %}
+            </td>
+            <td class="r">
+              {% if bet.edge is not none %}
+                <span class="{{ 'pos' if bet.edge >= 0 else 'neg' }}">{{ "%+.1f%%"|format(bet.edge * 100) }}</span>
+              {% else %}<span class="dim">—</span>{% endif %}
+            </td>
+            <td class="r">
+              {% if bet.form_a is not none and bet.form_b is not none %}
+                {{ "%.0f%%"|format(bet.form_a * 100) }} / {{ "%.0f%%"|format(bet.form_b * 100) }}
+              {% else %}<span class="dim">—</span>{% endif %}
+            </td>
+            <td class="r">
+              {% if bet.h2h_winrate is not none and (bet.h2h_sample or 0) >= 3 %}
+                {{ "%.0f%%"|format(bet.h2h_winrate * 100) }}
+                <span class="dim">({{ bet.h2h_sample }})</span>
+              {% else %}<span class="dim">—</span>{% endif %}
+            </td>
+            <td class="r">{{ "%.3f"|format(bet.score) }}</td>
+            <td class="r">${{ "%.0f"|format(bet.kelly_stake if bet.kelly_stake is not none else bet.virtual_amount) }}</td>
+            <td class="r">${{ "%.2f"|format(bet.potential_payout) }}</td>
+            <td class="r">
+              {% if bet.result_price is not none %}
+                <span class="{{ 'pos' if bet.result_price >= 0.99 else ('neg' if bet.result_price <= 0.01 else '') }}">
+                  {{ "%.4f"|format(bet.result_price) }}
+                </span>
+              {% else %}<span class="dim">—</span>{% endif %}
+            </td>
+            <td class="muted">{{ bet.timestamp[:16] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty">
+      [NO BETS YET]<br>
+      <span style="margin-top:8px;display:block">Waiting for active Dota 2 markets · Markets appear during TI, Majors, DPC</span>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Backtest ──────────────────────────────────────────────────── -->
+  {% if bt_summary %}
+  {% set s = bt_summary %}
+  {% set elo_acc = (s.elo_accuracy   * 100) | round(1) %}
+  {% set mod_acc = (s.model_accuracy * 100) | round(1) %}
+  {% set cal_pct = ((1 - s.calibration_factor) * 100) | round(0) | int %}
+
+  <div class="section card">
+    <div class="card-header">
+      <span class="label">Backtest</span>
+      <span class="label">{{ s.n_matches }} matches · {{ s.days }}d · {{ s.run_at[:16] }} UTC</span>
+    </div>
+    <div class="card-body">
+
+      <!-- Backtest stat strip -->
+      <div class="stat-grid" style="margin-bottom:24px">
+        <div class="stat-card">
+          <span class="label">Elo Acc</span>
+          <span class="stat-value">{{ elo_acc }}%</span>
+        </div>
+        <div class="stat-card">
+          <span class="label">Model Acc</span>
+          <span class="stat-value {{ 'pos' if mod_acc >= 55 else 'neg' }}">{{ mod_acc }}%</span>
+        </div>
+        <div class="stat-card">
+          <span class="label">Elo Brier</span>
+          <span class="stat-value" style="font-size:22px">{{ "%.4f"|format(s.elo_brier) }}</span>
+        </div>
+        <div class="stat-card">
+          <span class="label">Model Brier</span>
+          <span class="stat-value" style="font-size:22px">{{ "%.4f"|format(s.model_brier) }}</span>
+        </div>
+        <div class="stat-card">
+          <span class="label">Baseline Brier</span>
+          <span class="stat-value" style="font-size:22px">{{ "%.4f"|format(s.baseline_brier) }}</span>
+        </div>
+        <div class="stat-card">
+          <span class="label">Calibration</span>
+          <span class="stat-value" style="font-size:22px">-{{ cal_pct }}%</span>
+        </div>
       </div>
-    </div>
-    {% endfor %}
-  </div>
 
-  <!-- Bets table -->
-  <div class="card">
-    <div class="card-header d-flex justify-content-between">
-      <span>All Bets</span>
-      <span class="text-muted small">{{ bets | length }} total</span>
-    </div>
-    <div class="card-body p-0">
-      {% if bets %}
-      <div class="table-responsive">
-        <table class="table table-hover mb-0">
+      <!-- Match sample table -->
+      <div class="table-wrap">
+        <table style="font-size:12px">
           <thead>
             <tr>
-              <th>#</th>
-              <th>Match</th>
-              <th>Outcome</th>
-              <th>Status</th>
-              <th>Tier</th>
-              <th class="text-end">Mkt%</th>
-              <th class="text-end">True%</th>
-              <th class="text-end">Edge</th>
-              <th class="text-end">Form A/B</th>
-              <th class="text-end">H2H</th>
-              <th class="text-end">Score</th>
-              <th class="text-end">Stake</th>
-              <th class="text-end">Payout</th>
-              <th class="text-end">Result</th>
-              <th>Time</th>
+              <th>Date</th>
+              <th>Team A</th>
+              <th>Team B</th>
+              <th>Tournament</th>
+              <th class="r">Elo %</th>
+              <th class="r">Raw %</th>
+              <th class="r">Cal %</th>
+              <th class="c">Winner</th>
+              <th class="c">✓</th>
             </tr>
           </thead>
           <tbody>
-            {% for bet in bets %}
+            {% for m in bt_matches %}
             <tr>
-              <td class="text-muted">{{ bet.id }}</td>
-              <td title="{{ bet.question }}">
-                {% if bet.team_a and bet.team_b %}
-                  <span class="fw-semibold">{{ bet.team_a }}</span>
-                  <span class="text-muted"> vs </span>
-                  <span class="fw-semibold">{{ bet.team_b }}</span>
+              <td class="muted">{{ m.start_time | int | strftime }}</td>
+              <td style="font-weight:500;color:var(--text-display)">{{ m.team_a[:20] }}</td>
+              <td>{{ m.team_b[:20] }}</td>
+              <td class="muted">{{ (m.league or '—')[:30] }}</td>
+              <td class="r">{{ "%.0f%%"|format(m.elo_prob * 100) }}</td>
+              <td class="r dim">{{ "%.0f%%"|format((m.raw_true_prob or m.true_prob) * 100) }}</td>
+              <td class="r">
+                <span class="{{ 'pos' if m.true_prob > 0.5 else 'neg' }}">
+                  {{ "%.0f%%"|format(m.true_prob * 100) }}
+                </span>
+              </td>
+              <td class="c">
+                {% if m.team_a_won %}
+                  <span class="pos" style="font-size:12px;font-family:var(--font-mono)">{{ m.team_a[:14] }}</span>
                 {% else %}
-                  {{ bet.question[:55] }}{% if bet.question|length > 55 %}…{% endif %}
+                  <span class="neg" style="font-size:12px;font-family:var(--font-mono)">{{ m.team_b[:14] }}</span>
                 {% endif %}
               </td>
-              <td>{{ bet.outcome }}</td>
-              <td>
-                <span class="badge badge-{{ bet.status }}">{{ bet.status.upper() }}</span>
+              <td class="c">
+                {% if m.model_correct %}
+                  <span class="correct">✓</span>
+                {% else %}
+                  <span class="incorrect">✗</span>
+                {% endif %}
               </td>
-              <td>
-                {% set tier = bet.league_tier or 'unknown' %}
-                <span class="badge badge-tier-{{ tier }}">{{ tier[:4].upper() }}</span>
-              </td>
-              <td class="text-end">{{ "%.1f%%"|format(bet.price_at_bet * 100) }}</td>
-              <td class="text-end">
-                {% if bet.true_prob is not none %}
-                  {{ "%.1f%%"|format(bet.true_prob * 100) }}
-                {% else %}<span class="text-muted">—</span>{% endif %}
-              </td>
-              <td class="text-end">
-                {% if bet.edge is not none %}
-                  <span class="{{ 'pnl-pos' if bet.edge >= 0 else 'pnl-neg' }}">
-                    {{ "%+.1f%%"|format(bet.edge * 100) }}
-                  </span>
-                {% else %}<span class="text-muted">—</span>{% endif %}
-              </td>
-              <td class="text-end">
-                {% if bet.form_a is not none and bet.form_b is not none %}
-                  {{ "%.0f%%"|format(bet.form_a * 100) }} / {{ "%.0f%%"|format(bet.form_b * 100) }}
-                {% else %}<span class="text-muted">—</span>{% endif %}
-              </td>
-              <td class="text-end">
-                {% if bet.h2h_winrate is not none and (bet.h2h_sample or 0) >= 3 %}
-                  {{ "%.0f%%"|format(bet.h2h_winrate * 100) }}
-                  <span class="text-muted small">({{ bet.h2h_sample }})</span>
-                {% else %}<span class="text-muted">—</span>{% endif %}
-              </td>
-              <td class="text-end">{{ "%.3f"|format(bet.score) }}</td>
-              <td class="text-end">${{ "%.0f"|format(bet.kelly_stake if bet.kelly_stake is not none else bet.virtual_amount) }}</td>
-              <td class="text-end">${{ "%.2f"|format(bet.potential_payout) }}</td>
-              <td class="text-end">
-                {% if bet.result_price is not none %}
-                  <span class="{{ 'pnl-pos' if bet.result_price >= 0.99 else ('pnl-neg' if bet.result_price <= 0.01 else '') }}">
-                    {{ "%.4f"|format(bet.result_price) }}
-                  </span>
-                {% else %}—{% endif %}
-              </td>
-              <td class="text-muted small">{{ bet.timestamp[:16] }}</td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
-      {% else %}
-      <div class="p-4 text-center text-muted">
-        No bets yet — waiting for active Dota 2 markets on Polymarket.<br>
-        <small class="text-muted">Markets appear during active tournaments (TI, Majors, DPC).</small>
-      </div>
+      {% if bt_matches | length == 50 %}
+      <p style="margin-top:12px;font-family:var(--font-mono);font-size:11px;color:var(--text-disabled)">
+        Showing 50 most recent · <a href="/api/backtest">Full data via API</a>
+      </p>
       {% endif %}
     </div>
   </div>
 
-  <!-- Backtest Section -->
-  <div class="mt-4">
-    {% if bt_summary %}
-    {% set s = bt_summary %}
-    {% set elo_acc  = (s.elo_accuracy   * 100) | round(1) %}
-    {% set mod_acc  = (s.model_accuracy * 100) | round(1) %}
-    {% set cal_pct  = ((1 - s.calibration_factor) * 100) | round(0) | int %}
-
-    <div class="card mb-3">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <span class="fw-semibold">Model Backtest</span>
-        <span class="text-muted small">
-          {{ s.n_matches }} matches &nbsp;·&nbsp; {{ s.days }}d lookback
-          &nbsp;·&nbsp; run {{ s.run_at[:16] }} UTC
-        </span>
-      </div>
-      <div class="card-body">
-
-        <!-- Summary stat strip -->
-        <div class="row g-3 mb-4">
-          {% set bt_cards = [
-            ("Elo Accuracy",    elo_acc ~ "%",  ""),
-            ("Model Accuracy",  mod_acc ~ "%",  "model"),
-            ("Elo Brier",       "%.4f" | format(s.elo_brier),   "brier"),
-            ("Model Brier",     "%.4f" | format(s.model_brier), "brier"),
-            ("Baseline Brier",  "%.4f" | format(s.baseline_brier), ""),
-            ("Calibration",     "-" ~ cal_pct ~ "% shrink", ""),
-          ] %}
-          {% for label, value, kind in bt_cards %}
-          <div class="col-6 col-md-4 col-lg-2">
-            <div class="card h-100 text-center py-2 px-1" style="background:#0d1117">
-              <div class="text-muted small mb-1">{{ label }}</div>
-              <div class="fw-bold fs-5
-                {% if kind == 'model' %}{{ 'pnl-pos' if mod_acc >= 55 else 'pnl-neg' }}
-                {% elif kind == 'brier' %}{% endif %}
-              " style="color:#e6edf3">{{ value }}</div>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-
-        <!-- Match sample table -->
-        <div class="table-responsive">
-          <table class="table table-hover mb-0" style="font-size:.82rem">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Team A</th>
-                <th>Team B</th>
-                <th>Tournament</th>
-                <th class="text-end">Elo%</th>
-                <th class="text-end">Raw%</th>
-                <th class="text-end">Cal%</th>
-                <th class="text-center">Winner</th>
-                <th class="text-center">Correct?</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for m in bt_matches %}
-              <tr>
-                <td class="text-muted">{{ m.start_time | int | strftime }}</td>
-                <td class="fw-semibold">{{ m.team_a[:20] }}</td>
-                <td>{{ m.team_b[:20] }}</td>
-                <td class="text-muted small">{{ (m.league or '—')[:30] }}</td>
-                <td class="text-end">{{ "%.0f%%"|format(m.elo_prob * 100) }}</td>
-                <td class="text-end text-muted">{{ "%.0f%%"|format((m.raw_true_prob or m.true_prob) * 100) }}</td>
-                <td class="text-end">
-                  <span class="{{ 'pnl-pos' if m.true_prob > 0.5 else 'pnl-neg' }}">
-                    {{ "%.0f%%"|format(m.true_prob * 100) }}
-                  </span>
-                </td>
-                <td class="text-center">
-                  {% if m.team_a_won %}
-                    <span class="text-success fw-semibold">{{ m.team_a[:14] }}</span>
-                  {% else %}
-                    <span class="text-danger">{{ m.team_b[:14] }}</span>
-                  {% endif %}
-                </td>
-                <td class="text-center">
-                  {% if m.model_correct %}
-                    <span class="badge badge-won">✓</span>
-                  {% else %}
-                    <span class="badge badge-lost">✗</span>
-                  {% endif %}
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        {% if bt_matches | length == 50 %}
-        <p class="text-muted small mt-2 mb-0">Showing 50 most recent matches. <a href="/api/backtest">Full data via API</a>.</p>
-        {% endif %}
-
-      </div>
+  {% else %}
+  <div class="section card">
+    <div class="empty">
+      [NO BACKTEST DATA]<br>
+      <span style="margin-top:8px;display:block">Run <code style="color:var(--text-secondary)">python backtest.py</code> to generate results</span>
     </div>
-
-    {% else %}
-    <div class="card">
-      <div class="card-body text-center text-muted py-4">
-        No backtest data yet. Run <code>python backtest.py</code> to generate results.
-      </div>
-    </div>
-    {% endif %}
   </div>
+  {% endif %}
 
-  <div class="mt-3 text-muted refresh-note text-end">
-    API endpoints: <a href="/api/stats">/api/stats</a> &nbsp;|&nbsp;
-    <a href="/api/bets">/api/bets</a> &nbsp;|&nbsp;
+  <!-- ── Footer ────────────────────────────────────────────────────── -->
+  <div class="footer">
+    <a href="/api/stats">/api/stats</a>
+    <a href="/api/bets">/api/bets</a>
     <a href="/api/backtest">/api/backtest</a>
+    <a href="/api/elo">/api/elo</a>
   </div>
 
-</div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

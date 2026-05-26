@@ -89,6 +89,17 @@ def init_db() -> None:
 
             CREATE INDEX IF NOT EXISTS idx_backtest_matches_run
                 ON backtest_matches(backtest_id);
+
+            CREATE TABLE IF NOT EXISTS elo_snapshots (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                team_name   TEXT NOT NULL,
+                team_id     INTEGER NOT NULL,
+                elo         REAL NOT NULL,
+                snapshot_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_elo_snapshots_at
+                ON elo_snapshots(snapshot_at);
         """)
 
         # Auto-migration: add new columns if they don't exist yet
@@ -327,3 +338,53 @@ def get_backtest_matches(backtest_id: int, limit: int = 50) -> list[sqlite3.Row]
             """,
             (backtest_id, limit),
         ).fetchall()
+
+
+# ---------------------------------------------------------------------------
+# ELO snapshot helpers
+# ---------------------------------------------------------------------------
+
+def save_elo_snapshot(roster: dict) -> int:
+    """
+    Persist the current in-memory roster as an ELO snapshot.
+    `roster` is opendota._roster: normalised_name → (team_id, rating).
+    Returns number of rows inserted.
+    """
+    snapshot_at = datetime.utcnow().isoformat()
+    rows = [
+        (name, int(team_id), float(rating), snapshot_at)
+        for name, (team_id, rating) in roster.items()
+        if rating > 0
+    ]
+    if not rows:
+        return 0
+    with get_connection() as conn:
+        conn.executemany(
+            "INSERT INTO elo_snapshots (team_name, team_id, elo, snapshot_at) VALUES (?, ?, ?, ?)",
+            rows,
+        )
+    return len(rows)
+
+
+def get_latest_elo_rankings(limit: int = 100) -> list[dict]:
+    """
+    Return the most recent ELO rating per team, sorted descending.
+    Uses the latest snapshot_at timestamp in the table.
+    """
+    with get_connection() as conn:
+        latest_at = conn.execute(
+            "SELECT MAX(snapshot_at) FROM elo_snapshots"
+        ).fetchone()[0]
+        if not latest_at:
+            return []
+        rows = conn.execute(
+            """
+            SELECT team_name, team_id, elo
+            FROM elo_snapshots
+            WHERE snapshot_at = ?
+            ORDER BY elo DESC
+            LIMIT ?
+            """,
+            (latest_at, limit),
+        ).fetchall()
+    return [{"name": r["team_name"], "team_id": r["team_id"], "elo": r["elo"]} for r in rows]
