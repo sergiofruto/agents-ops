@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stock Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --black:    #000000;
+      --surface:  #111111;
+      --border:   #222222;
+      --text:     #ffffff;
+      --muted:    #666666;
+      --accent:   #ff3b3b;
+      --green:    #00ff88;
+      --yellow:   #ffcc00;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--black); color: var(--text); font-family: 'Space Grotesk', sans-serif; padding: 24px; }
+    h1, h2 { font-family: 'Space Mono', monospace; text-transform: uppercase; letter-spacing: 0.1em; }
+    h1 { font-size: 1rem; color: var(--muted); margin-bottom: 24px; }
+    h2 { font-size: 0.75rem; color: var(--muted); margin-bottom: 12px; }
+
+    .tag { display: inline-block; background: var(--accent); color: #fff; font-family: 'Space Mono', monospace; font-size: 0.65rem; padding: 2px 8px; margin-left: 10px; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1px; background: var(--border); margin-bottom: 32px; }
+    .stat { background: var(--surface); padding: 16px; }
+    .stat-label { font-family: 'Space Mono', monospace; font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+    .stat-value { font-family: 'Space Mono', monospace; font-size: 1.4rem; font-weight: 700; }
+    .positive { color: var(--green); }
+    .negative { color: var(--accent); }
+    .neutral  { color: var(--yellow); }
+
+    table { width: 100%; border-collapse: collapse; margin-bottom: 32px; }
+    th { font-family: 'Space Mono', monospace; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 0.875rem; }
+    tr:hover td { background: var(--surface); }
+    .buy  { color: var(--green); font-family: 'Space Mono', monospace; font-size: 0.75rem; }
+    .sell { color: var(--accent); font-family: 'Space Mono', monospace; font-size: 0.75rem; }
+    .mono { font-family: 'Space Mono', monospace; font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+  <h1>STOCK AGENT <span class="tag">PAPER</span></h1>
+
+  <div class="grid" id="stats-grid">
+    <div class="stat"><div class="stat-label">Bankroll</div><div class="stat-value" id="bankroll">—</div></div>
+    <div class="stat"><div class="stat-label">Exposure</div><div class="stat-value" id="exposure">—</div></div>
+    <div class="stat"><div class="stat-label">Realized PnL</div><div class="stat-value" id="pnl">—</div></div>
+    <div class="stat"><div class="stat-label">Win Rate</div><div class="stat-value" id="winrate">—</div></div>
+    <div class="stat"><div class="stat-label">Open</div><div class="stat-value" id="open">—</div></div>
+    <div class="stat"><div class="stat-label">Total Trades</div><div class="stat-value" id="total">—</div></div>
+  </div>
+
+  <h2>Open Positions</h2>
+  <table id="pos-table">
+    <thead><tr><th>Symbol</th><th>Dir</th><th>Entry</th><th>Current</th><th>PnL%</th><th>Stake</th><th>Stop Loss</th><th>Take Profit</th><th>Conf</th></tr></thead>
+    <tbody id="pos-body"></tbody>
+  </table>
+
+  <h2>Recent Signals</h2>
+  <table id="sig-table">
+    <thead><tr><th>Symbol</th><th>Direction</th><th>Confidence</th><th>Acted</th><th>Reasoning</th><th>Time</th></tr></thead>
+    <tbody id="sig-body"></tbody>
+  </table>
+
+  <h2>Closed Trades</h2>
+  <table id="hist-table">
+    <thead><tr><th>Symbol</th><th>Dir</th><th>Entry</th><th>Close</th><th>PnL%</th><th>PnL $</th><th>Closed</th></tr></thead>
+    <tbody id="hist-body"></tbody>
+  </table>
+
+  <script>
+    const fmt = (n, d=2) => n != null ? Number(n).toFixed(d) : '—';
+    const fmtUSD = n => n != null ? '$' + Number(n).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—';
+
+    async function refresh() {
+      const [statsRes, posRes, sigRes, histRes] = await Promise.all([
+        fetch('/api/stats'), fetch('/api/positions'), fetch('/api/signals'), fetch('/api/history')
+      ]);
+      const {stats, bankroll, exposure} = await statsRes.json();
+      const positions = await posRes.json();
+      const signals   = await sigRes.json();
+      const history   = await histRes.json();
+
+      document.getElementById('bankroll').textContent = fmtUSD(bankroll);
+      document.getElementById('exposure').textContent = fmtUSD(exposure);
+      const pnlEl = document.getElementById('pnl');
+      pnlEl.textContent = (stats.realized_pnl >= 0 ? '+' : '') + fmtUSD(stats.realized_pnl);
+      pnlEl.className = 'stat-value ' + (stats.realized_pnl >= 0 ? 'positive' : 'negative');
+      document.getElementById('winrate').textContent = Math.round(stats.win_rate * 100) + '%';
+      document.getElementById('open').textContent  = stats.open;
+      document.getElementById('total').textContent = stats.total;
+
+      const posBody = document.getElementById('pos-body');
+      posBody.innerHTML = positions.length ? positions.map(p => {
+        const cur = p.current_price || p.entry_price;
+        const pnl = p.direction === 'BUY' ? (cur - p.entry_price)/p.entry_price*100 : (p.entry_price - cur)/p.entry_price*100;
+        return `<tr>
+          <td class="mono">${p.symbol}</td>
+          <td class="${p.direction.toLowerCase()}">${p.direction}</td>
+          <td class="mono">${fmtUSD(p.entry_price)}</td>
+          <td class="mono">${fmtUSD(cur)}</td>
+          <td class="mono ${pnl>=0?'positive':'negative'}">${pnl>=0?'+':''}${fmt(pnl)}%</td>
+          <td class="mono">${fmtUSD(p.stake_usd)}</td>
+          <td class="mono negative">${fmtUSD(p.stop_loss)}</td>
+          <td class="mono positive">${fmtUSD(p.take_profit)}</td>
+          <td class="mono">${Math.round(p.confidence*100)}%</td>
+        </tr>`;
+      }).join('') : '<tr><td colspan="9" style="color:#666;text-align:center">No open positions</td></tr>';
+
+      const sigBody = document.getElementById('sig-body');
+      sigBody.innerHTML = signals.map(s => `<tr>
+        <td class="mono">${s.symbol}</td>
+        <td class="${s.direction.toLowerCase()}">${s.direction}</td>
+        <td class="mono">${Math.round(s.confidence*100)}%</td>
+        <td>${s.acted ? '✓' : '—'}</td>
+        <td style="color:#aaa;font-size:0.8rem">${s.reasoning||'—'}</td>
+        <td class="mono" style="color:#666;font-size:0.75rem">${s.created_at?.slice(0,16)||'—'}</td>
+      </tr>`).join('') || '<tr><td colspan="6" style="color:#666;text-align:center">No signals yet</td></tr>';
+
+      const histBody = document.getElementById('hist-body');
+      histBody.innerHTML = history.map(p => {
+        const pnl = p.pnl_pct ? p.pnl_pct * 100 : 0;
+        return `<tr>
+          <td class="mono">${p.symbol}</td>
+          <td class="${p.direction.toLowerCase()}">${p.direction}</td>
+          <td class="mono">${fmtUSD(p.entry_price)}</td>
+          <td class="mono">${fmtUSD(p.close_price)}</td>
+          <td class="mono ${pnl>=0?'positive':'negative'}">${pnl>=0?'+':''}${fmt(pnl)}%</td>
+          <td class="mono ${p.pnl_usd>=0?'positive':'negative'}">${p.pnl_usd>=0?'+':''}${fmtUSD(p.pnl_usd)}</td>
+          <td class="mono" style="color:#666;font-size:0.75rem">${p.closed_at?.slice(0,16)||'—'}</td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="7" style="color:#666;text-align:center">No closed trades</td></tr>';
+    }
+
+    refresh();
+    setInterval(refresh, 10000);
+  </script>
+</body>
+</html>

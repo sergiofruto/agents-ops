@@ -1,0 +1,184 @@
+agent:
+  id: stock-agent
+  name: Stock Market Analyzer & Paper Trader
+  path: ../stock-agent
+  entry: main.py
+  enabled: false
+
+schedule:
+  frequency: continuous
+  run_at: null
+  max_runtime_minutes: null
+depends_on: []
+
+inputs:
+  memory_keys: []
+  upstream_outputs: []
+
+outputs:
+- key: positions_open
+  description: Number of open paper positions
+  type: int
+- key: realized_pnl
+  description: Total realized PnL in USD
+  type: float
+- key: win_rate
+  description: Win rate of closed trades (0.0-1.0)
+  type: float
+- key: bankroll
+  description: Current virtual bankroll in USD
+  type: float
+
+# ── GO-LIVE PLAN (target: Monday May 4) ──────────────────────────────────────
+#
+#  Saturday May 2
+#    [1] verify_boot       — install deps, fill .env keys, confirm boot
+#    [2] first_scan        — end-to-end scan, check agent.log for signals
+#
+#  Sunday May 3
+#    [3] market_hours_filter — add is_market_open(); equities 9:30-16:00 ET only
+#    [4] overnight_stability — leave running overnight, confirm no crashes
+#
+#  Monday May 4
+#    [5] go_live           — enable agent, monitor first market-hours scan live
+#
+#  Post-Monday
+#    [6] solaris_integration
+#    [7] backtest
+#    [8] alpha_vantage_mcp
+# ─────────────────────────────────────────────────────────────────────────────
+
+tasks:
+
+# ── SATURDAY (blockers) ───────────────────────────────────────────────────────
+
+- id: verify_boot
+  description: >
+    pip install -r requirements.txt.
+    Fill .env: ANTHROPIC_API_KEY (same key as polymarket), ALPHA_VANTAGE_KEY already set.
+    Run: python main.py
+    Confirm: Rich terminal dashboard renders, scan thread starts, web UI at
+    localhost:5005 loads with empty stats. Check agent.log for startup messages.
+  status: active
+  priority: high
+  recurrent: false
+  depends_on: []
+
+- id: first_scan
+  description: >
+    Confirm first scan runs end-to-end. Check agent.log for:
+      - "Analyzing AAPL (stock)" for each symbol
+      - "RSI oversold / MACD bullish" rule signals firing
+      - LLM returning BUY/SELL/HOLD with confidence
+      - "[PAPER] BUY AAPL @ $..." if confidence >= 0.65
+    If no trades placed, check MIN_RULE_SIGNALS=2 threshold — may need to lower to 1
+    during first run to validate the pipeline.
+  status: active
+  priority: high
+  recurrent: false
+  depends_on:
+  - verify_boot
+
+# ── SUNDAY (go-live prep) ─────────────────────────────────────────────────────
+
+- id: market_hours_filter
+  description: >
+    Add is_market_open() to fetcher.py.
+    US equities: Monday-Friday 9:30-16:00 ET only (pytz America/New_York).
+    Crypto: always scan (24/7).
+    In main.py _run_scan(): skip stock symbols if not is_market_open(), log reason.
+    This protects Alpha Vantage 25 calls/day quota and avoids stale overnight data.
+    Also add NYSE holiday list for 2026 (Memorial Day May 25, etc).
+  status: active
+  priority: high
+  recurrent: false
+  depends_on:
+  - first_scan
+
+- id: overnight_stability
+  description: >
+    Leave agent running from Sunday evening through Monday morning.
+    Confirm: no crashes, crypto scans fire overnight, equity scans skip (market closed),
+    logs rotate cleanly, web UI still accessible after 8h uptime.
+  status: active
+  priority: high
+  recurrent: false
+  depends_on:
+  - market_hours_filter
+
+# ── MONDAY GO-LIVE ────────────────────────────────────────────────────────────
+
+- id: go_live
+  description: >
+    Monday May 4 — first live market-hours scan.
+    Enable agent in roadmap.yaml (enabled: true).
+    Watch 9:30 ET scan: confirm yfinance returns fresh OHLCV, signals fire,
+    paper trades placed with Kelly sizing.
+    Monitor positions through day, check tracker applies SL/TP correctly.
+  status: active
+  priority: high
+  recurrent: false
+  depends_on:
+  - overnight_stability
+
+# ── RECURRENT (always-on after go-live) ──────────────────────────────────────
+
+- id: scan_markets
+  description: Analyze watchlist, compute technicals, synthesize signals, place paper trades
+  status: active
+  priority: high
+  recurrent: true
+  depends_on: []
+
+- id: track_positions
+  description: Poll open paper positions every 15 min, apply stop-loss / take-profit
+  status: active
+  priority: high
+  recurrent: true
+  depends_on:
+  - scan_markets
+
+# ── POST-MONDAY ───────────────────────────────────────────────────────────────
+
+- id: solaris_integration
+  description: >
+    Add stock-agent card to Solaris dashboard. Expose /api/stock/positions and
+    /api/stock/stats from solaris/web/app.py reading from positions.db directly.
+  status: active
+  priority: medium
+  recurrent: false
+  depends_on:
+  - go_live
+
+- id: backtest
+  description: >
+    Add backtest.py — replay historical signals on OHLCV data to validate rule
+    thresholds before trusting live paper results.
+  status: active
+  priority: low
+  recurrent: false
+  depends_on:
+  - go_live
+
+- id: alpha_vantage_mcp
+  description: >
+    Add Alpha Vantage MCP to Claude Code config for interactive exploration.
+    Command: claude mcp add -t http alphavantage
+    https://mcp.alphavantage.co/mcp?apikey=R2SOH3PCST6YP7VO
+  status: active
+  priority: low
+  recurrent: false
+  depends_on: []
+
+memory:
+  last_run: null
+  last_status: never_run
+  last_output: {}
+  notes: >
+    Go-live target: Monday May 4. Stack: yfinance (OHLCV + technicals),
+    Alpha Vantage (news sentiment + fundamentals, 25 calls/day cached 24h),
+    Claude Haiku (LLM synthesis). Signals: RSI, MACD, Bollinger Bands, SMA
+    crossover, volume spike. Virtual bankroll $10k. Watchlist: AAPL MSFT NVDA
+    TSLA META AMZN / BTC ETH SOL. PAPER TRADING ONLY — no real money.
+    Key risk: Alpha Vantage 25 calls/day — market_hours_filter is required
+    before go-live to avoid burning quota on overnight/weekend scans.
