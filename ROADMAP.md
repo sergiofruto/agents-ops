@@ -1,188 +1,114 @@
-# Solaris & Agents — Roadmap
-
-> Daily improvement log. Each session we pick one or two items, ship them, and mark them done.
-> Ordered roughly by impact × effort. Add new ideas at the bottom of each section.
+# agents-op — Roadmap
 
 ---
 
-## What exists today (baseline)
+## Tomorrow (Apr 8)
 
-| System | Status | Notes |
-|--------|--------|-------|
-| **Solaris** dashboard | ✅ Running | Glassmorphic UI, 4 sections, Good Morning modal |
-| Solaris `/polymarket` detail page | ✅ Done | Full bet table, stats chips |
-| Solaris `/dota` detail page | ✅ Done | Bets + backtest history + Elo rankings |
-| Solaris weather widget | ✅ Done | Open-Meteo + geolocation |
-| Solaris job tracker | ✅ Done | Pipeline CRUD, interview tracking |
-| Solaris Good Morning modal | ✅ Done | Agent status, overnight activity, water tracker, daily quote |
-| **Polymarket agent** | ✅ Running live | Kelly sizing, implied-edge filter, 5-signal scorer |
-| **Dota 2 agent** | ✅ Dry-run | Elo model, backtest, OpenDota API |
+### Morning — Polymarket v0.1 finish line
+Three quick items to close out stabilization. Agent is live with real money.
 
----
+1. **`.env.example`** — document every config var with defaults and one-line comments
+2. **CoinGecko cache key fix** — change cache key from `coin_id:dte` to `coin_id` only. Stops 429 storms on crypto scans
+3. **LLM stricter in live mode** — require `confidence=high` OR `edge > MIN_EDGE*2` for Claude Haiku signals when `DRY_RUN=false`
 
-## Day-by-day plan
+### Afternoon — Job Hunter `main.py`
+Most directly useful right now. Build the entry point:
+- Finish `profile.yml` — exit story, Auth0/Scale AI proof points, visa status
+- Read all HTMLs from `job-hunter-agent/`
+- Parse, score fit against `profile.yml`
+- Generate cover note via Claude
+- Sync to Solaris DB, enable agent in `roadmap.yaml`
 
-### Day 1 — already done ✅
-- Glassmorphic redesign of Solaris
-- `/polymarket` and `/dota` detail pages
-- Weather widget in header
-- Daily motivational quote in Good Morning modal
+### Evening — Coordinator dry run
+Run `python coordinator.py` for real. Read the daily log output. Tune `SOLARIS.md` based on quality.
 
 ---
 
-### Day 2 — Live clock + SSE push updates
-**Goal:** Kill the dumb 60-second meta refresh. Make the dashboard feel alive.
+## Daily Agent Routines
 
-- [ ] Replace `<meta http-equiv="refresh">` with a Server-Sent Events stream (`/api/stream`)
-- [ ] Solaris pushes a lightweight JSON ping every 30s with fresh market + agent data
-- [ ] JS patches the DOM in-place (no full reload = no flash)
-- [ ] Add a live clock in the header (ticks every second in JS)
-- [ ] "Last updated" timestamp next to each agent card
+Each agent gets one focused improvement per session. Small, compounding.
 
-**Files:** `solaris/web/app.py`, `solaris/web/templates/index.html`
+### Polymarket
+| Day | Focus |
+|-----|-------|
+| Mon | Review last week's bets — which signal categories are winning/losing? |
+| Tue | Edge filter tuning — adjust `MIN_EDGE` based on live results |
+| Wed | Add or improve one signal source |
+| Thu | Tracker improvements — resolution detection, void handling |
+| Fri | Backtest a parameter change before applying it live |
 
----
+### Dota Agent
+| Day | Focus |
+|-----|-------|
+| Mon | ELO calibration — do rankings match recent tournament results? |
+| Tue | Feature addition — one new signal (patch version, tournament tier weight) |
+| Wed | Backtest the new feature |
+| Thu | Review open bets — any systematic misses? |
+| Fri | Roster update check |
 
-### Day 3 — Polymarket P&L chart
-**Goal:** See the equity curve over time, not just a number.
-
-- [ ] Add `recorded_at` snapshots to `bets.db` (cumulative P&L per day)
-- [ ] `/api/polymarket/pnl-history` endpoint → `[{date, cumulative_pnl}]`
-- [ ] Render as an SVG sparkline (no external chart lib) on the `/polymarket` page
-- [ ] Show drawdown and best/worst day
-
-**Files:** `polymarket-agent/database.py`, `solaris/agents.py`, `solaris/web/templates/polymarket.html`
-
----
-
-### Day 4 — Dota agent: go live
-**Goal:** Switch Dota from dry-run to actually placing bets on Polymarket.
-
-- [ ] Map OpenDota team names → Polymarket market slugs
-- [ ] Add a confidence gate: only bet when `true_prob > 0.65` AND `edge > 0.08`
-- [ ] Test end-to-end with a $1 real bet
-- [ ] Add `is_live` flag to dota stats in Solaris
-
-**Files:** `dota-agent/simulator.py`, `dota-agent/analyzer.py`, `dota-agent/config.py`
-
----
-
-### Day 5 — Solaris mobile + PWA
-**Goal:** Open it on your phone and have it feel native.
-
-- [ ] Fix layout breakpoints (current 2-col agent row breaks on small screens)
-- [ ] Add `manifest.json` + service worker so it installs as a PWA
-- [ ] `apple-touch-icon` + theme color meta tags
-- [ ] Tap-friendly button sizes
-
-**Files:** `solaris/web/templates/index.html`, new `solaris/web/static/manifest.json`
-
----
-
-### Day 6 — Browser push notifications
-**Goal:** Get a push notification when a bet resolves (won/lost) without having the page open.
-
-- [ ] Register a service worker with Push API
-- [ ] Solaris tracks `last_notified_bet_id` per agent
-- [ ] Tracker polling loop calls `/api/notify` when new resolved bets appear
-- [ ] Notification shows: "📈 Polymarket — Won $47 on [question]"
-
-**Files:** `solaris/web/app.py`, `solaris/web/templates/index.html`, new service worker
-
----
-
-### Day 7 — Polymarket signal improvement: news sentiment
-**Goal:** Add a news-based signal to the scorer so it can catch momentum shifts.
-
-- [ ] Fetch headlines for a market question via NewsAPI (or free RSS scraping)
-- [ ] Run a quick Claude Haiku call: "Given these headlines, is sentiment bullish or bearish for YES?"
-- [ ] Add `news_signal` score (−1 to +1) to `BetCandidate`
-- [ ] Weight it at ~15% in the final score
-
-**Files:** `polymarket-agent/signals.py`, `polymarket-agent/analyzer.py`, `polymarket-agent/config.py`
-
----
-
-### Day 8 — Solaris: Job tracker improvements
-**Goal:** Make the job tracker actually useful daily, not just a glorified spreadsheet.
-
-- [ ] Add "Days since applied" computed column
-- [ ] Color-code rows by staleness (green < 7d, yellow 7–14d, red > 14d)
-- [ ] One-click "follow up" button that copies a follow-up email template
-- [ ] Add a notes field per job (inline editable)
-- [ ] Weekly summary in Good Morning: "You have X jobs in technical round"
-
-**Files:** `solaris/database.py`, `solaris/web/app.py`, `solaris/web/templates/index.html`
-
----
-
-### Day 9 — New agent: Crypto arbitrage scanner
-**Goal:** Scan for price discrepancies between prediction markets and crypto spot.
-
-- [ ] Agent watches BTC/ETH price-correlated Polymarket markets
-- [ ] Flags when implied market probability diverges from price action by >10%
-- [ ] Dry-run only initially, just alerts in Solaris
-- [ ] New `crypto-agent/` directory, same architecture as polymarket-agent
-
-**Files:** new `crypto-agent/` module, `solaris/agents.py`, `solaris/config.py`
-
----
-
-### Day 10 — Polymarket: Kelly compounding + bankroll management
-**Goal:** Grow the virtual bankroll properly instead of fixed $5–100 stakes.
-
-- [ ] Track `current_bankroll` in `bets.db` (starts at $1000 virtual)
-- [ ] Kelly stake = `bankroll × kelly_fraction` (capped at 5% per bet)
-- [ ] Bankroll updates on each resolution
-- [ ] Show bankroll curve on the P&L chart
-
-**Files:** `polymarket-agent/simulator.py`, `polymarket-agent/database.py`, `polymarket-agent/config.py`
-
----
-
-## Backlog (unscheduled ideas)
+### Job Hunter
+| Day | Focus |
+|-----|-------|
+| Mon | Process new HTML files dropped into `job-hunter-agent/` |
+| Tue | Improve fit scorer — add one new scoring dimension |
+| Wed | Follow-up check — update status on applied roles in Solaris |
+| Thu | Research one company in the pipeline |
+| Fri | Outreach — send one cold message or follow-up |
 
 ### Solaris
-- [ ] Dark/light theme toggle (persist in localStorage)
-- [ ] CSV export on detail pages
-- [ ] Search + filter on bet history tables
-- [ ] Keyboard shortcut `G` → Good Morning, `R` → refresh
-- [ ] `/api/dashboard` auth (simple token) so it's safe to expose on LAN
-- [ ] Multiple watchlists for stocks (tech / macro / personal)
-
-### Polymarket agent
-- [ ] Telegram/Discord alert when a high-confidence bet is placed
-- [ ] Auto-void detection for markets that resolve ambiguously
-- [ ] Multi-leg parlay simulation
-- [ ] Back-test the scorer against historical resolved markets
-
-### Dota agent
-- [ ] Ingest patch notes → adjust team form scores after major patches
-- [ ] Tournament bracket awareness (adjust kelly for BO1 vs BO3)
-- [ ] Add a second model: XGBoost trained on OpenDota match history
-- [ ] Roster change detection (API → re-run Elo on affected teams)
-
-### New agents
-- [ ] **Calendar agent** — scrape upcoming Polymarket market expirations, surface in Good Morning
-- [ ] **Earnings agent** — track stock earnings dates, bet on volatility markets around them
-- [ ] **Sports agent** — NBA/NFL markets using similar Elo + form approach as Dota
+| Day | Focus |
+|-----|-------|
+| Mon | Read yesterday's daily log — action any suggestions |
+| Tue | Dashboard improvement — one UI thing that's been annoying |
+| Wed | Coordinator tune — update roadmap.yaml tasks |
+| Thu | New data source or API connection |
+| Fri | Review weekly coordinator logs — what patterns emerged? |
 
 ---
 
-## Architecture notes
+## Deployment (Hetzner VPS)
 
-```
-claude-code-agents/
-├── polymarket-agent/   # Live betting agent (Polymarket CLOB)
-├── dota-agent/         # Dota 2 prediction model + betting
-├── solaris/            # Dashboard: aggregates all agents + markets + career
-├── crypto-agent/       # (planned Day 9)
-└── ROADMAP.md          # This file
-```
+Goal: move all agents off local machine to a Hetzner CX22 VPS (~€4/month).
+Architecture: one VPS for all daemons + Flask/FastAPI backends, Vercel for Next.js frontends.
 
-Each agent is **self-contained**: its own DB, scheduler, Flask mini-UI, and Rich terminal dashboard.
-Solaris reads their DBs **read-only** — no coupling, no shared state.
+### Tasks
+- [ ] **provision_vps** — Create Hetzner CX22 (Ubuntu 24.04), SSH key, UFW firewall rules
+- [ ] **nginx_setup** — Install nginx + Certbot; one subdomain per service behind HTTPS
+- [ ] **systemd_units** — Write unit files for each agent (polymarket, stock, analyst, dota, alfajor-backend, solaris-api); auto-restart on crash
+- [ ] **migrate_dbs** — rsync SQLite files from local to VPS; verify integrity
+- [ ] **deploy_agents** — Clone repo on VPS, set .env files, enable + start all systemd units
+- [ ] **deploy_frontends** — Point Solaris web-next + Alfajor frontend to VPS API URL; deploy both to Vercel free tier
+- [ ] **verify_all** — Confirm all agents are scanning/tracking, web UIs accessible, logs flowing
 
 ---
 
-*Updated: 2026-03-31*
+## Backlog (prioritized)
+
+### High
+- [ ] Job hunter `main.py` — entry point, fit scorer, cover note generator, Solaris sync
+- [ ] `profile.yml` completion — exit story, proof points, visa status
+- [ ] Polymarket order fill confirmation — poll `get_order()` after posting; mark `pending_fill`
+- [ ] Analyst web UI — finish briefs pages, npm install, end-to-end test
+
+### Medium
+- [ ] Coordinator cron — launchd job, runs at 6am without manual trigger
+- [ ] Daily log viewer in Solaris — `/logs` page with markdown renderer
+- [ ] Polymarket graceful shutdown — print open positions on Ctrl+C
+- [ ] Polymarket cooldown bug — use `resolved_at` not `placed_at`
+- [ ] Dota coordinator outputs — emit `__coordinator_outputs__` at end of run
+- [ ] Polymarket P&L chart — equity curve on `/polymarket` page
+
+### Low
+- [ ] Polymarket LIVE mode banner in reporter terminal
+- [ ] `rescore.py` — integrate into scan cycle or move to `tools/`
+- [ ] README screenshots — terminal + dashboard
+- [ ] Solaris mobile layout — responsive fixes for small screens
+
+---
+
+## Weekly rhythm
+
+| | Mon | Tue | Wed | Thu | Fri | Weekend |
+|-|-----|-----|-----|-----|-----|---------|
+| **Agent** | Polymarket | Job Hunter | Solaris | Dota | Any | Build session |
+| **Ritual** | Read weekly P&L | Process job HTMLs | Read daily logs | Dota backtest | Backlog item | Update this roadmap |
