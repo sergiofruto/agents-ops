@@ -1,103 +1,105 @@
 agent:
-  id: "polymarket-agent"
-  name: "Polymarket Trading Agent"
-  path: "../polymarket-agent"
-  entry: "main.py"
+  id: polymarket-agent
+  name: Polymarket Trading Agent
+  path: ../polymarket-agent
+  entry: main.py
   enabled: true
-
 schedule:
-  frequency: "daily"
-  run_at: "06:00"
-  max_runtime_minutes: 60   # long-running — scan + track cycle
-
+  frequency: daily
+  run_at: 06:00
+  max_runtime_minutes: 60
 depends_on: []
-
 inputs:
   memory_keys: []
   upstream_outputs: []
-
 outputs:
-  - key: "bets_placed"
-    description: "Number of new bets placed this scan"
-    type: "int"
-  - key: "open_exposure"
-    description: "Current open exposure in USD"
-    type: "float"
-  - key: "live_bankroll"
-    description: "Current live bankroll after settled bets"
-    type: "float"
-  - key: "open_bets"
-    description: "Number of currently open bets"
-    type: "int"
-
+- key: bets_placed
+  description: Number of new bets placed this scan
+  type: int
+- key: open_exposure
+  description: Current open exposure in USD
+  type: float
+- key: live_bankroll
+  description: Current live bankroll after settled bets
+  type: float
+- key: open_bets
+  description: Number of currently open bets
+  type: int
 tasks:
-  # ── Recurrent (run every day) ──────────────────────────────────────────
-  - id: "scan_markets"
-    description: "Fetch and score active Polymarket markets, place qualifying bets"
-    status: "active"
-    priority: "high"
-    recurrent: true
-    depends_on: []
-
-  - id: "track_resolutions"
-    description: "Poll open bets for resolution, stop-loss, take-profit triggers"
-    status: "active"
-    priority: "high"
-    recurrent: true
-    depends_on: ["scan_markets"]
-
-  # ── v0.1 one-shot tasks ────────────────────────────────────────────────
-  - id: "env_example"
-    description: "Create .env.example with all config vars and one-line comments"
-    status: "active"
-    priority: "medium"
-    recurrent: false
-    depends_on: []
-
-  - id: "coingecko_cache_fix"
-    description: "Fix cache key to coin_id only; add exponential backoff on 429s"
-    status: "active"
-    priority: "medium"
-    recurrent: false
-    depends_on: []
-
-  - id: "order_fill_confirmation"
-    description: "Poll get_order() after posting; mark pending_fill if unmatched"
-    status: "active"
-    priority: "medium"
-    recurrent: false
-    depends_on: []
-
-  - id: "live_mode_banner"
-    description: "Add red LIVE MODE banner to reporter.py terminal dashboard"
-    status: "active"
-    priority: "low"
-    recurrent: false
-    depends_on: []
-
-  - id: "llm_stricter_live"
-    description: "Require confidence=high or edge > MIN_EDGE*2 for LLM signals in live mode"
-    status: "active"
-    priority: "medium"
-    recurrent: false
-    depends_on: []
-
-  - id: "graceful_shutdown"
-    description: "Print open positions table on Ctrl+C; warn if live bets are open"
-    status: "active"
-    priority: "low"
-    recurrent: false
-    depends_on: []
-
-  - id: "cooldown_bug_fix"
-    description: "Add resolved_at column; cooldown window starts at resolution, not placement"
-    status: "active"
-    priority: "low"
-    recurrent: false
-    depends_on: []
-
+- id: scan_markets
+  description: Fetch and score active Polymarket markets, place qualifying bets
+  status: active
+  priority: high
+  recurrent: true
+  depends_on: []
+- id: track_resolutions
+  description: Poll open bets for resolution, stop-loss, take-profit triggers
+  status: active
+  priority: high
+  recurrent: true
+  depends_on:
+  - scan_markets
+- id: env_example
+  description: Create .env.example with all config vars and one-line comments
+  status: done
+  priority: medium
+  recurrent: false
+  depends_on: []
+- id: coingecko_cache_fix
+  description: Fix cache key to coin_id only; add exponential backoff on 429s
+  status: done
+  priority: medium
+  recurrent: false
+  depends_on: []
+- id: order_fill_confirmation
+  description: Poll get_order() after posting; mark pending_fill if unmatched
+  status: done
+  priority: high
+  recurrent: false
+  depends_on: []
+- id: live_mode_banner
+  description: Add red LIVE MODE banner to reporter.py terminal dashboard
+  status: active
+  priority: medium
+  recurrent: false
+  depends_on: []
+- id: llm_stricter_live
+  description: Require confidence=high or edge > MIN_EDGE*2 for LLM signals in live
+    mode
+  status: done
+  priority: medium
+  recurrent: false
+  depends_on: []
+- id: graceful_shutdown
+  description: Print open positions table on Ctrl+C; warn if live bets are open
+  status: active
+  priority: medium
+  recurrent: false
+  depends_on: []
+- id: cooldown_bug_fix
+  description: Add resolved_at column; cooldown window starts at resolution, not placement
+  status: done
+  priority: high
+  recurrent: false
+  depends_on: []
+- id: exposure_formula_bug
+  description: >
+    max_exposure = live_bankroll * PCT double-counts open exposure. live_bankroll
+    already deducts open_exposure, so limit collapses as bets accumulate. Fix:
+    max_exposure = (live_bankroll + open_exposure) * MAX_OPEN_EXPOSURE_PCT.
+  status: done
+  priority: high
+  recurrent: false
+  depends_on: []
 memory:
-  last_run: null
-  last_status: null
-  last_output: {}
-  notes: "v0.1 stabilization in progress. Live mode active with $100 bankroll."
+  last_run: '2026-04-13T00:00:00+00:00'
+  last_status: running
+  last_output:
+    open_bets: 5
+    open_exposure: 50.0
+    bets_placed_today: 0
+  notes: >
+    LIVE. 5 open bets $50 exposure, $0 realized PnL. Exposure formula bug fixed
+    (live_bankroll + open_exposure * PCT). fill_status + resolved_at columns added
+    — need agent restart to run migration. graceful_shutdown + live_mode_banner
+    still open (medium priority hygiene). Needs restart to pick up all fixes.

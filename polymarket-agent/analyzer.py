@@ -52,10 +52,13 @@ def _probability_score(prob: float) -> float:
 
 
 def _volume_score(volume_24h: float) -> float:
-    """Log-scale normalised against $500K ceiling."""
+    """Log-scale normalised against $50K ceiling.
+    Most quality Polymarket markets sit in the $5K–$50K range;
+    a $500K ceiling compresses that range and reduces discrimination.
+    """
     if volume_24h <= 0:
         return 0.0
-    ceiling = math.log10(500_000)
+    ceiling = math.log10(50_000)
     return min(math.log10(max(volume_24h, 1)) / ceiling, 1.0)
 
 
@@ -256,10 +259,63 @@ def _parse_outcomes(market: dict) -> list[str]:
 # Public API
 # ---------------------------------------------------------------------------
 
+# Canonical coin name extracted from a question, used for correlation detection.
+_COIN_ALIASES: dict[str, str] = {
+    "bitcoin": "bitcoin", "btc": "bitcoin",
+    "ethereum": "ethereum", "eth": "ethereum",
+    "solana": "solana", "sol": "solana",
+    "dogecoin": "dogecoin", "doge": "dogecoin",
+    "ripple": "ripple", "xrp": "ripple",
+    "cardano": "cardano", "ada": "cardano",
+    "bnb": "bnb", "binance": "bnb",
+    "avalanche": "avalanche", "avax": "avalanche",
+    "polygon": "polygon", "matic": "polygon",
+}
+
+
+def _extract_coin(question: str) -> Optional[str]:
+    """Return canonical coin name if the question is about a specific crypto asset."""
+    q = question.lower()
+    for alias, canonical in _COIN_ALIASES.items():
+        if alias in q:
+            return canonical
+    return None
+
+
+def _is_correlated_with_open(candidate: BetCandidate, open_bets: list) -> bool:
+    """
+    Return True if the candidate is correlated with an existing open bet.
+    Detected case: same coin + same outcome direction (both No, or both Yes).
+    Rationale: "Will BTC reach $80K? No" and "Will BTC reach $82.5K? No" are
+    effectively the same directional thesis on BTC price — holding both doubles
+    exposure without diversifying.
+    """
+    coin = _extract_coin(candidate.question)
+    if coin is None:
+        return False
+
+    direction = candidate.outcome.strip().lower()
+    for bet in open_bets:
+        if _extract_coin(bet["question"]) == coin and bet["outcome"].strip().lower() == direction:
+            logger.info(
+                "Correlation filter: skipping '%s' (coin=%s, outcome=%s) — "
+                "already holding correlated bet '%s'",
+                candidate.question[:60], coin, candidate.outcome,
+                bet["question"][:60],
+            )
+            return True
+    return False
+
+
 def score_markets(markets: list[dict]) -> list[BetCandidate]:
     """
-    Score all markets and return candidates that pass the MIN_SCORE threshold,
-    sorted by composite score descending.
+    Score all markets, then apply risk filters before returning candidates.
+
+    Filters applied (in order, after scoring):
+      1. Category cap  — skip if open bets in same category >= MAX_BETS_PER_CATEGORY
+      2. Correlation   — skip crypto bets in the same direction on the same coin
+    Both filters also account for candidates already selected in this scan cycle,
+    so placing 5 BTC bets in a single scan is not possible even if the DB is empty.
     """
     candidates: list[BetCandidate] = []
 
@@ -270,7 +326,45 @@ def score_markets(markets: list[dict]) -> list[BetCandidate]:
             logger.debug("Skipping market %s: %s", market.get("id", "?"), exc)
 
     candidates.sort(key=lambda c: c.score, reverse=True)
-    return candidates
+
+    # ── Build current open-bet state ──────────────────────────────────────────
+    open_bets = database.get_open_bets()
+
+    # Category counts from existing open bets
+    category_counts: dict[str, int] = {}
+    for bet in open_bets:
+        cat = _infer_category(bet["question"])
+        category_counts[cat] = category_counts.get(cat, 0) + 1
+
+    # ── Greedy filter: best score first ──────────────────────────────────────
+    # We track a mutable list of "virtual open bets" that includes both DB open
+    # bets and candidates already accepted this scan, so intra-scan correlation
+    # is caught too.
+    virtual_open = list(open_bets)  # sqlite3.Row objects; accessed via ["key"]
+
+    filtered: list[BetCandidate] = []
+    for c in candidates:
+        cat = _infer_category(c.question)
+
+        # 1. Category cap
+        if category_counts.get(cat, 0) >= config.MAX_BETS_PER_CATEGORY:
+            logger.info(
+                "Category cap: skipping '%s' — '%s' already at %d open bet(s)",
+                c.question[:60], cat, category_counts[cat],
+            )
+            continue
+
+        # 2. Correlation filter
+        if _is_correlated_with_open(c, virtual_open):
+            continue
+
+        filtered.append(c)
+        category_counts[cat] = category_counts.get(cat, 0) + 1
+
+        # Add a dict proxy so _extract_coin / outcome lookups work on it
+        virtual_open.append({"question": c.question, "outcome": c.outcome})  # type: ignore[arg-type]
+
+    return filtered
 
 
 def _score_single(market: dict, candidates: list[BetCandidate]) -> None:

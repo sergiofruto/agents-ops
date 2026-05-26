@@ -52,6 +52,14 @@ python main.py
 
 Web dashboard: `http://localhost:5001`
 
+### Utilities
+
+```bash
+# Re-score open bets with the LLM to check if the thesis still holds
+python rescore.py           # only bets with no edge signal
+python rescore.py --all     # every open bet
+```
+
 ---
 
 ## Configuration

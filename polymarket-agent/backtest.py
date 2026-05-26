@@ -115,7 +115,7 @@ def _probability_score(prob: float, min_prob: float, max_prob: float) -> float:
 def _volume_score(volume_24h: float) -> float:
     if volume_24h <= 0:
         return 0.0
-    ceiling = math.log10(500_000)
+    ceiling = math.log10(50_000)
     return min(math.log10(max(volume_24h, 1)) / ceiling, 1.0)
 
 

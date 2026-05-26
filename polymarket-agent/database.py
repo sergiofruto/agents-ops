@@ -5,8 +5,10 @@ import config
 
 
 def get_connection() -> sqlite3.Connection:
-    conn = sqlite3.connect(config.DB_PATH)
+    conn = sqlite3.connect(config.DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")   # allows concurrent read+write between threads
+    conn.execute("PRAGMA busy_timeout=5000")  # wait up to 5s instead of immediately raising
     return conn
 
 
@@ -56,6 +58,8 @@ def init_db() -> None:
             ("edge_available",  "INTEGER DEFAULT 0"),  # 1 if true_prob was computed
             ("true_prob",       "REAL"),               # model-derived probability
             ("days_to_expiry",  "INTEGER"),             # days from bet placement to close
+            ("fill_status",     "TEXT"),                # 'filled', 'pending_fill', NULL (dry-run)
+            ("resolved_at",     "TEXT"),                # UTC ISO timestamp of resolution
         ]:
             try:
                 conn.execute(f"ALTER TABLE bets ADD COLUMN {col} {typedef}")
@@ -101,11 +105,28 @@ def save_bet(
 
 
 def update_bet_result(bet_id: int, status: str, result_price: float) -> None:
+    resolved_at = datetime.utcnow().isoformat()
     with get_connection() as conn:
         conn.execute(
-            "UPDATE bets SET status=?, result_price=? WHERE id=?",
-            (status, result_price, bet_id),
+            "UPDATE bets SET status=?, result_price=?, resolved_at=? WHERE id=?",
+            (status, result_price, resolved_at, bet_id),
         )
+
+
+def update_fill_status(bet_id: int, fill_status: str) -> None:
+    with get_connection() as conn:
+        conn.execute(
+            "UPDATE bets SET fill_status=? WHERE id=?",
+            (fill_status, bet_id),
+        )
+
+
+def get_pending_fill_bets() -> list[sqlite3.Row]:
+    """Return live bets whose CLOB order has not yet been confirmed as matched."""
+    with get_connection() as conn:
+        return conn.execute(
+            "SELECT * FROM bets WHERE fill_status='pending_fill' ORDER BY timestamp DESC"
+        ).fetchall()
 
 
 def get_open_bets() -> list[sqlite3.Row]:
@@ -133,11 +154,21 @@ def is_market_open(market_id: str) -> bool:
 
 
 def is_market_on_cooldown(market_id: str, cooldown_days: int = 7) -> bool:
-    """Return True if this market resolved within the last `cooldown_days` days."""
+    """
+    Return True if this market resolved within the last `cooldown_days` days.
+    Uses resolved_at (not placement timestamp) so the cooldown window starts
+    from when the outcome was confirmed, not when the bet was placed.
+    Falls back to timestamp for legacy rows that predate the resolved_at column.
+    """
     cutoff = (datetime.utcnow() - timedelta(days=cooldown_days)).isoformat()
     with get_connection() as conn:
         row = conn.execute(
-            "SELECT 1 FROM bets WHERE market_id=? AND status IN ('won','lost') AND timestamp >= ?",
+            """
+            SELECT 1 FROM bets
+            WHERE market_id=?
+              AND status IN ('won', 'lost')
+              AND COALESCE(resolved_at, timestamp) >= ?
+            """,
             (market_id, cutoff),
         ).fetchone()
         return row is not None

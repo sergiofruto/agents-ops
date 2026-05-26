@@ -32,6 +32,27 @@ _SESSION.headers.update({"Accept": "application/json", "User-Agent": "polymarket
 
 _TIMEOUT = 10
 
+
+def _evict_expired(cache: dict, key_fn=None) -> None:
+    """
+    Remove stale entries from a TTL cache dict in-place.
+
+    Two cache shapes are supported:
+      - {key: (expires_at, ...)}   — expires_at is index 0  (crypto_cache, llm_cache)
+      - {key: (fetched_at, ...)}   — pass key_fn=lambda v: v[0] + TTL to get expires_at
+        (odds_cache uses fetched_at, not expires_at)
+
+    Call this at the start of each fetch to keep memory bounded.
+    """
+    now = time.time()
+    if key_fn is None:
+        # expires_at is the first element
+        stale = [k for k, v in cache.items() if v[0] < now]
+    else:
+        stale = [k for k, v in cache.items() if key_fn(v) < now]
+    for k in stale:
+        del cache[k]
+
 # ---------------------------------------------------------------------------
 # Kelly helper (shared by analyzer and backtest)
 # ---------------------------------------------------------------------------
@@ -115,8 +136,10 @@ _COIN_ID_MAP: dict[str, str] = {
     "uniswap": "uniswap",  "uni": "uniswap",
 }
 
-# Cache: coin_id -> (expires_at, spot_price, annualised_sigma)
-_crypto_cache: dict[str, tuple[float, float, float]] = {}
+# Cache: coin_id -> (expires_at, spot_price, sigma_7d, sigma_30d)
+# Raw sigmas are stored; blending happens at call time using days_to_expiry.
+# One entry per coin regardless of DTE — prevents 429 storms on large scans.
+_crypto_cache: dict[str, tuple[float, float, float, float]] = {}
 _CRYPTO_CACHE_TTL = 3600  # 1 hour
 
 _COINGECKO_BASE = "https://api.coingecko.com/api/v3"
@@ -149,66 +172,91 @@ def _annualised_sigma(closes: list[float]) -> float:
     return math.sqrt(variance) * math.sqrt(365)
 
 
+def _coingecko_get(url: str, params: dict) -> Optional[dict]:
+    """
+    GET a CoinGecko endpoint with exponential backoff on 429 (rate limit).
+    Tries up to 3 times: 0s, 1s, 2s wait before each retry.
+    Returns the parsed JSON dict, or None on failure.
+    """
+    delays = [0, 1, 2]
+    for attempt, delay in enumerate(delays):
+        if delay:
+            time.sleep(delay)
+        try:
+            r = _SESSION.get(url, params=params, timeout=_TIMEOUT)
+            if r.status_code == 429:
+                logger.debug(
+                    "CoinGecko 429 rate-limit (attempt %d/%d) — waiting %ds",
+                    attempt + 1, len(delays), delays[attempt + 1] if attempt + 1 < len(delays) else 0,
+                )
+                continue
+            r.raise_for_status()
+            return r.json()
+        except Exception as exc:
+            logger.debug("CoinGecko request error (attempt %d): %s", attempt + 1, exc)
+            if attempt == len(delays) - 1:
+                return None
+    return None
+
+
 def _fetch_crypto_data(coin_id: str, days_to_expiry: int = 30) -> Optional[tuple[float, float]]:
     """
     Return (spot_price, blended_annualised_sigma) using CoinGecko, with 1h caching.
+
+    Cache key is coin_id only — raw sigma_7d and sigma_30d are stored and
+    blended at call time. This ensures a scan with 50 crypto markets at
+    different DTEs makes at most 2 API calls per coin (not 50).
 
     Vol blending: short expiry → weight 7d vol more (captures recent regime);
     long expiry → weight 30d vol more (smooths out spikes).
       weight_7d  = max(0, 1 - days_to_expiry / 30)   → 1.0 at 0d, 0.0 at 30d+
       weight_30d = 1 - weight_7d
     """
-    cache_key = f"{coin_id}:{days_to_expiry}"
     now = time.time()
-    if cache_key in _crypto_cache:
-        expires, spot, sigma = _crypto_cache[cache_key]
+    _evict_expired(_crypto_cache)
+    if coin_id in _crypto_cache:
+        expires, spot, sigma_7d_cached, sigma_30d_cached = _crypto_cache[coin_id]
         if now < expires:
-            return spot, sigma
+            w_short = max(0.0, 1.0 - days_to_expiry / 30.0)
+            blended = w_short * sigma_7d_cached + (1.0 - w_short) * sigma_30d_cached
+            return spot, blended
 
-    try:
-        # Spot price
-        r = _SESSION.get(
-            f"{_COINGECKO_BASE}/simple/price",
-            params={"ids": coin_id, "vs_currencies": "usd"},
-            timeout=_TIMEOUT,
-        )
-        r.raise_for_status()
-        spot = float(r.json()[coin_id]["usd"])
-
-        # 30-day daily closes (also contains the last 7 days)
-        r2 = _SESSION.get(
-            f"{_COINGECKO_BASE}/coins/{coin_id}/market_chart",
-            params={"vs_currency": "usd", "days": 30, "interval": "daily"},
-            timeout=_TIMEOUT,
-        )
-        r2.raise_for_status()
-        prices_raw = r2.json().get("prices", [])
-        closes_30d = [p[1] for p in prices_raw if p[1] > 0]
-
-        if len(closes_30d) < 5:
-            return None
-
-        sigma_30d = _annualised_sigma(closes_30d)
-
-        # 7-day slice for short-window vol
-        closes_7d = closes_30d[-8:] if len(closes_30d) >= 8 else closes_30d
-        sigma_7d  = _annualised_sigma(closes_7d) if len(closes_7d) >= 3 else sigma_30d
-
-        # Blend: nearer expiry → trust recent vol more
-        w_short = max(0.0, 1.0 - days_to_expiry / 30.0)
-        w_long  = 1.0 - w_short
-        blended_sigma = w_short * sigma_7d + w_long * sigma_30d
-
-        _crypto_cache[cache_key] = (now + _CRYPTO_CACHE_TTL, spot, blended_sigma)
-        logger.debug(
-            "Vol blend for %s | dte=%dd | σ_7d=%.2f σ_30d=%.2f σ_blend=%.2f (w_short=%.0f%%)",
-            coin_id, days_to_expiry, sigma_7d, sigma_30d, blended_sigma, w_short * 100,
-        )
-        return spot, blended_sigma
-
-    except Exception as exc:
-        logger.debug("CoinGecko fetch error for %s: %s", coin_id, exc)
+    # Spot price
+    spot_data = _coingecko_get(
+        f"{_COINGECKO_BASE}/simple/price",
+        {"ids": coin_id, "vs_currencies": "usd"},
+    )
+    if not spot_data or coin_id not in spot_data:
         return None
+    spot = float(spot_data[coin_id]["usd"])
+
+    # 30-day daily closes (also contains the last 7 days)
+    chart_data = _coingecko_get(
+        f"{_COINGECKO_BASE}/coins/{coin_id}/market_chart",
+        {"vs_currency": "usd", "days": 30, "interval": "daily"},
+    )
+    if not chart_data:
+        return None
+
+    closes_30d = [p[1] for p in chart_data.get("prices", []) if p[1] > 0]
+    if len(closes_30d) < 5:
+        return None
+
+    sigma_30d = _annualised_sigma(closes_30d)
+    closes_7d = closes_30d[-8:] if len(closes_30d) >= 8 else closes_30d
+    sigma_7d  = _annualised_sigma(closes_7d) if len(closes_7d) >= 3 else sigma_30d
+
+    # Store raw sigmas — blend at call time
+    _crypto_cache[coin_id] = (now + _CRYPTO_CACHE_TTL, spot, sigma_7d, sigma_30d)
+
+    w_short = max(0.0, 1.0 - days_to_expiry / 30.0)
+    blended_sigma = w_short * sigma_7d + (1.0 - w_short) * sigma_30d
+
+    logger.debug(
+        "CoinGecko fetch %s | dte=%dd | σ_7d=%.2f σ_30d=%.2f σ_blend=%.2f (w_short=%.0f%%)",
+        coin_id, days_to_expiry, sigma_7d, sigma_30d, blended_sigma, w_short * 100,
+    )
+    return spot, blended_sigma
 
 
 def _norm_cdf(x: float) -> float:
@@ -390,6 +438,7 @@ def _detect_sport_key(question: str) -> Optional[str]:
 
 def _fetch_odds(sport_key: str, odds_api_key: str) -> Optional[list]:
     now = time.time()
+    _evict_expired(_odds_cache, key_fn=lambda v: v[0] + _ODDS_CACHE_TTL)
     if sport_key in _odds_cache:
         fetched_at, events = _odds_cache[sport_key]
         if now - fetched_at < _ODDS_CACHE_TTL:
@@ -468,7 +517,7 @@ def _best_event_match(question: str, events: list) -> Optional[dict]:
             best_score = overlap
             best_event = event
 
-    if best_score < 1:
+    if best_score < 2:
         return None
     return best_event
 
@@ -544,6 +593,7 @@ def _detect_outrights_key(question: str) -> Optional[str]:
 
 def _fetch_outrights(sport_key: str, odds_api_key: str) -> Optional[list]:
     now = time.time()
+    _evict_expired(_outrights_cache, key_fn=lambda v: v[0] + _ODDS_CACHE_TTL)
     if sport_key in _outrights_cache:
         fetched_at, events = _outrights_cache[sport_key]
         if now - fetched_at < _ODDS_CACHE_TTL:
@@ -641,7 +691,33 @@ def _sports_edge(
 
 # Cache: question_key -> (expires_at, true_prob)
 _llm_cache: dict[str, tuple[float, float]] = {}
-_LLM_CACHE_TTL = 4 * 3600  # 4 hours
+
+# Cache TTL is dynamic: near-expiry markets stale faster (news moves fast).
+# _llm_cache_ttl(close_date) → seconds
+def _llm_cache_ttl(close_date=None) -> float:
+    """Return cache TTL in seconds based on how close the market expires.
+    Near-expiry markets are news-sensitive — don't serve a 4h-old LLM answer
+    when the situation may have changed.
+    """
+    if close_date is None:
+        return 4 * 3600
+    # Compute DTE inline to avoid circular import with analyzer.py
+    dte: Optional[int] = None
+    try:
+        if isinstance(close_date, str) and re.search(r'\d{4}-\d{2}-\d{2}', close_date):
+            dt = datetime.fromisoformat(close_date.replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            dte = max(0, (dt - datetime.now(timezone.utc)).days)
+    except Exception:
+        pass
+    if dte is None:
+        return 4 * 3600
+    if dte <= 1:
+        return 30 * 60    # 30 min — imminent, news-sensitive
+    if dte <= 7:
+        return 1 * 3600   # 1 hour — near-term
+    return 4 * 3600       # 4 hours — default
 
 _LLM_SYSTEM_PROMPT = """\
 You are a calibrated probability forecaster for prediction markets.
@@ -671,17 +747,24 @@ def _llm_edge(
 
     cache_key = question.strip().lower()
     now = time.time()
+    _evict_expired(_llm_cache)
     if cache_key in _llm_cache:
         expires, cached_prob = _llm_cache[cache_key]
         if now < expires:
             return cached_prob - polymarket_prob, cached_prob
 
+    today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     deadline_str = ""
     if close_date:
         deadline_str = f"\nResolution deadline: {close_date}"
 
     # Always ask for P(YES) — caller handles "No" outcome flip
-    user_msg = f"Market question: {question}{deadline_str}\n\nWhat is the probability this resolves YES?"
+    user_msg = (
+        f"Today's date: {today_str}"
+        f"{deadline_str}"
+        f"\nMarket question: {question}"
+        f"\n\nWhat is the probability this resolves YES?"
+    )
 
     try:
         import anthropic
@@ -712,7 +795,22 @@ def _llm_edge(
         if confidence == "low":
             return None, None
 
-        _llm_cache[cache_key] = (now + _LLM_CACHE_TTL, true_prob)
+        # In live mode, medium-confidence signals must clear a higher edge bar.
+        # Real money shouldn't move on a guess; require high confidence OR edge > 2× MIN_EDGE.
+        try:
+            import config as _live_cfg
+            if not _live_cfg.DRY_RUN and confidence != "high":
+                implied_edge = abs(true_prob - polymarket_prob)
+                if implied_edge <= _live_cfg.MIN_EDGE * 2:
+                    logger.debug(
+                        "LLM signal rejected (live mode, conf=%s, edge=%.3f < %.3f threshold)",
+                        confidence, implied_edge, _live_cfg.MIN_EDGE * 2,
+                    )
+                    return None, None
+        except Exception:
+            pass
+
+        _llm_cache[cache_key] = (now + _llm_cache_ttl(close_date), true_prob)
         edge = true_prob - polymarket_prob
         logger.debug(
             "LLM edge | q='%s' | market=%.2f | model=%.2f | edge=%+.2f | conf=%s | reason=%s",

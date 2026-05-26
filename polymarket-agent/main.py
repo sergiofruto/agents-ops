@@ -112,7 +112,7 @@ def _run_scan():
             # Enforce portfolio exposure limit before each bet
             live_bankroll = database.get_live_bankroll(config.VIRTUAL_BANKROLL)
             open_exposure = database.get_open_exposure()
-            max_exposure  = live_bankroll * config.MAX_OPEN_EXPOSURE_PCT
+            max_exposure  = (live_bankroll + open_exposure) * config.MAX_OPEN_EXPOSURE_PCT
             if open_exposure >= max_exposure:
                 logger.info(
                     "Exposure limit reached ($%.0f / $%.0f max) — skipping remaining candidates",

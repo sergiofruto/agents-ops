@@ -14,7 +14,7 @@ def _sell_position(bet, current_price: float) -> bool:
     Returns True if the order was accepted, False on any failure.
     """
     try:
-        from py_clob_client.clob_types import OrderArgs, PartialCreateOrderOptions
+        from py_clob_client_v2.clob_types import OrderArgs, CreateOrderOptions as PartialCreateOrderOptions
 
         client   = get_clob_client()
         token_id = bet["token_id"]
@@ -74,12 +74,72 @@ def _parse_outcome_prices(detail: dict) -> list[float]:
         return []
 
 
+def check_pending_fills() -> None:
+    """
+    Re-poll the CLOB for each pending_fill bet to confirm match or void.
+    No-op in dry-run mode.
+    """
+    if config.DRY_RUN:
+        return
+
+    pending = database.get_pending_fill_bets()
+    if not pending:
+        return
+
+    logger.info("Checking %d pending-fill order(s)…", len(pending))
+
+    try:
+        client = get_clob_client()
+    except Exception as exc:
+        logger.error("Cannot check pending fills — CLOB client error: %s", exc)
+        return
+
+    for bet in pending:
+        order_id = bet["order_id"]
+        if not order_id:
+            logger.warning("Bet #%d has no order_id — voiding", bet["id"])
+            database.update_bet_result(bet["id"], "void", 0.0)
+            continue
+
+        try:
+            order         = client.get_order(order_id)
+            size_matched  = float(order.get("size_matched",  0) or 0)
+            original_size = float(order.get("original_size", 0) or 0)
+            order_status  = (order.get("status") or "").lower()
+
+            fill_pct = size_matched / original_size if original_size > 0 else 0
+
+            if fill_pct >= 0.95:
+                database.update_fill_status(bet["id"], "filled")
+                logger.info(
+                    "Bet #%d fill confirmed (%.0f%% matched) | order=%s",
+                    bet["id"], fill_pct * 100, order_id,
+                )
+            elif order_status in ("canceled", "cancelled", "expired"):
+                database.update_bet_result(bet["id"], "void", 0.0)
+                database.update_fill_status(bet["id"], "canceled")
+                logger.warning(
+                    "Bet #%d order %s — voided | order=%s",
+                    bet["id"], order_status, order_id,
+                )
+            else:
+                logger.warning(
+                    "Bet #%d still unmatched (%.0f%% filled, status=%s) | order=%s",
+                    bet["id"], fill_pct * 100, order_status, order_id,
+                )
+
+        except Exception as exc:
+            logger.warning("Error checking fill for bet #%d: %s", bet["id"], exc)
+
+
 def check_resolutions() -> None:
     """
     Poll all open bets and update any that have resolved.
     A winning outcome settles at price ≈ 1.0, losing at ≈ 0.0.
     Also prunes price_history rows older than 7 days.
     """
+    check_pending_fills()
+
     deleted = database.prune_price_history(days=3)
     if deleted:
         logger.info("Pruned %d stale price_history row(s)", deleted)
@@ -144,6 +204,19 @@ def _check_exit_triggers(bet, outcome_prices: list[float]) -> None:
             logger.info(
                 "  → [LIVE] Position closed as '%s' at price %.2f",
                 status, current_price,
+            )
+        elif current_price >= 0.99:
+            # Market effectively resolved at 1.0 — close in DB even if CLOB sell failed
+            database.update_bet_result(bet["id"], "won", current_price)
+            logger.warning(
+                "  → [LIVE] Sell failed but price=%.3f ≈ 1.0 — closing bet #%d as won",
+                current_price, bet["id"],
+            )
+        elif current_price <= 0.01:
+            database.update_bet_result(bet["id"], "lost", current_price)
+            logger.warning(
+                "  → [LIVE] Sell failed but price=%.3f ≈ 0.0 — closing bet #%d as lost",
+                current_price, bet["id"],
             )
         else:
             logger.error(

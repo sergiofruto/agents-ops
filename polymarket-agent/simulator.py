@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Optional
 from analyzer import BetCandidate
 import config
@@ -93,8 +94,8 @@ def get_clob_client():
 
 def _get_clob_client():
     """Build an L2-authenticated ClobClient. Raises on missing config."""
-    from py_clob_client.client import ClobClient
-    from py_clob_client.clob_types import ApiCreds
+    from py_clob_client_v2.client import ClobClient
+    from py_clob_client_v2.clob_types import ApiCreds
 
     missing = [
         name for name, val in [
@@ -141,6 +142,38 @@ def _round_to_tick(price: float, tick: float) -> float:
     return max(tick, min(1.0 - tick, rounded))
 
 
+def _confirm_fill(client, order_id: str, expected_size: float,
+                  max_polls: int = 3, poll_interval: float = 2.0) -> str:
+    """
+    Poll get_order() to check if the CLOB order was matched.
+    Returns 'filled' if >= 95% matched, 'pending_fill' otherwise.
+    """
+    if not order_id:
+        return "pending_fill"
+
+    for attempt in range(max_polls):
+        try:
+            order = client.get_order(order_id)
+            size_matched  = float(order.get("size_matched",  0) or 0)
+            original_size = float(order.get("original_size", expected_size) or expected_size)
+            fill_pct      = size_matched / original_size if original_size > 0 else 0
+
+            if fill_pct >= 0.95:
+                return "filled"
+
+            order_status = (order.get("status") or "").lower()
+            if order_status in ("canceled", "cancelled"):
+                return "pending_fill"  # tracker will void it
+
+        except Exception as exc:
+            logger.warning("Fill confirmation poll %d/%d failed: %s", attempt + 1, max_polls, exc)
+
+        if attempt < max_polls - 1:
+            time.sleep(poll_interval)
+
+    return "pending_fill"
+
+
 def _place_live_bet(candidate: BetCandidate) -> bool:
     if database.is_market_open(candidate.market_id):
         logger.debug("Skipping market %s — already have open bet", candidate.market_id)
@@ -152,7 +185,7 @@ def _place_live_bet(candidate: BetCandidate) -> bool:
         return False
 
     try:
-        from py_clob_client.clob_types import OrderArgs, PartialCreateOrderOptions
+        from py_clob_client_v2.clob_types import OrderArgs, CreateOrderOptions as PartialCreateOrderOptions
 
         client   = _get_clob_client()
         token_id = candidate.token_id
@@ -218,18 +251,35 @@ def _place_live_bet(candidate: BetCandidate) -> bool:
             logger.warning("Live order posted but DB insert blocked (duplicate) — market %s order %s", candidate.market_id, order_id)
             return False
 
+        # Poll CLOB to confirm the order was actually matched
+        fill_status = _confirm_fill(client, order_id, size)
+        database.update_fill_status(bet_id, fill_status)
+
         edge_str = f" | edge={candidate.edge:+.1%}" if candidate.edge is not None else ""
-        logger.info(
-            "[LIVE] Order posted | bet #%d | order=%s | status=%s | "
-            "%s → %s | p=%.2f%% | size=%.2f shares | spent=$%.2f%s",
-            bet_id, order_id, status,
-            candidate.question[:55],
-            candidate.outcome,
-            price * 100,
-            size,
-            usdc_spend,
-            edge_str,
-        )
+        if fill_status == "filled":
+            logger.info(
+                "[LIVE] Order filled | bet #%d | order=%s | "
+                "%s → %s | p=%.2f%% | size=%.2f shares | spent=$%.2f%s",
+                bet_id, order_id,
+                candidate.question[:55],
+                candidate.outcome,
+                price * 100,
+                size,
+                usdc_spend,
+                edge_str,
+            )
+        else:
+            logger.warning(
+                "[LIVE] Order NOT matched — pending_fill | bet #%d | order=%s | "
+                "%s → %s | p=%.2f%% | size=%.2f shares | spent=$%.2f%s",
+                bet_id, order_id,
+                candidate.question[:55],
+                candidate.outcome,
+                price * 100,
+                size,
+                usdc_spend,
+                edge_str,
+            )
         return True
 
     except Exception as exc:

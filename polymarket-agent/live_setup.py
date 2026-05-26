@@ -31,8 +31,8 @@ def main() -> None:
         private_key = "0x" + private_key
 
     try:
-        from py_clob_client.client import ClobClient
-        from py_clob_client.constants import POLYGON
+        from py_clob_client_v2.client import ClobClient
+        from py_clob_client_v2.constants import POLYGON
     except ImportError:
         print("ERROR: py-clob-client not installed.  Run: pip install -r requirements.txt")
         sys.exit(1)

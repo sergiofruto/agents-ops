@@ -10,6 +10,7 @@ from rich.table import Table
 from rich.text import Text
 
 import database
+import config
 
 console = Console()
 
@@ -129,13 +130,20 @@ def build_layout(
     track_str = f"Next track in {next_track_secs // 60}m {next_track_secs % 60:02d}s"
     last_str  = f"Last scan: {last_scan or 'never'}"
 
+    if config.DRY_RUN:
+        title        = "[bold green]Polymarket Dry-Run Agent[/bold green]"
+        border_style = "green"
+    else:
+        title        = "[bold red]⚡ Polymarket LIVE Agent[/bold red]"
+        border_style = "red"
+
     header = Panel(
         f"[bold white]{now_str}[/bold white]   "
         f"[yellow]{scan_str}[/yellow]   "
         f"[cyan]{track_str}[/cyan]   "
         f"[dim]{last_str}[/dim]",
-        title="[bold green]Polymarket Dry-Run Agent[/bold green]",
-        border_style="green",
+        title=title,
+        border_style=border_style,
     )
 
     from rich.console import Group

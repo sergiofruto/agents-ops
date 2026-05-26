@@ -35,6 +35,9 @@ ODDS_API_KEY = os.getenv("ODDS_API_KEY", "")  # the-odds-api.com free tier
 # Same-market re-entry cooldown
 MARKET_COOLDOWN_DAYS = int(os.getenv("MARKET_COOLDOWN_DAYS", "7"))
 
+# Per-category open bet cap (prevents 3× Bitcoin bets, etc.)
+MAX_BETS_PER_CATEGORY = int(os.getenv("MAX_BETS_PER_CATEGORY", "2"))
+
 # Stop-loss / take-profit
 STOP_LOSS_PPTS    = float(os.getenv("STOP_LOSS_PPTS",    "0.20"))  # close if price drops 20pp from entry
 TAKE_PROFIT_PPTS  = float(os.getenv("TAKE_PROFIT_PPTS",  "0.10"))  # close if price rises 10pp from entry
