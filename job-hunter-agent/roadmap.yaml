@@ -1,87 +1,107 @@
 agent:
-  id: "job-hunter-agent"
-  name: "Job Hunter"
-  path: "../job-hunter-agent"
-  entry: "main.py"
-  enabled: false            # no main.py yet — disabled until agent is built
-
+  id: job-hunter-agent
+  name: Job Hunter
+  path: ../job-hunter-agent
+  entry: main.py
+  enabled: true
 schedule:
-  frequency: "manual"       # triggered on demand, not on a cron
+  frequency: manual
   run_at: null
   max_runtime_minutes: 15
-
 depends_on: []
-
 inputs:
   memory_keys: []
   upstream_outputs: []
-
 outputs:
-  - key: "jobs_assessed"
-    description: "Number of HTML files processed this run"
-    type: "int"
-  - key: "jobs_added"
-    description: "Number of new jobs added to Solaris DB"
-    type: "int"
-  - key: "top_fit_company"
-    description: "Company name with highest fit score this run"
-    type: "string"
-
+- key: jobs_assessed
+  description: Number of HTML files processed this run
+  type: int
+- key: jobs_added
+  description: Number of new jobs added to Solaris DB
+  type: int
+- key: top_fit_company
+  description: Company name with highest fit score this run
+  type: string
 tasks:
-  # ── Profile completion ─────────────────────────────────────────────────
-  - id: "complete_profile_yaml"
-    description: "Fill in config/profile.yml — exit story, proof points, visa status, compensation"
-    status: "active"
-    priority: "high"
-    recurrent: false
-    depends_on: []
-
-  - id: "build_main_py"
-    description: "Build main.py: read HTML files from job-hunter-agent/, parse, score fit, emit outputs"
-    status: "active"
-    priority: "high"
-    recurrent: false
-    depends_on: ["complete_profile_yaml"]
-
-  # ── Active job pipeline ────────────────────────────────────────────────
-  - id: "process_splink"
-    description: "Splink — cover note drafted, added to Solaris DB. Follow up on application."
-    status: "done"
-    priority: "high"
-    recurrent: false
-    depends_on: []
-
-  - id: "process_wellfound_queue"
-    description: "Download and process remaining Wellfound HTML files in queue"
-    status: "active"
-    priority: "high"
-    recurrent: false
-    depends_on: []
-
-  # ── Agent features ─────────────────────────────────────────────────────
-  - id: "fit_scorer"
-    description: "Auto-score job fit against profile.yml: stack match, seniority, equity, remote"
-    status: "active"
-    priority: "medium"
-    recurrent: false
-    depends_on: ["build_main_py"]
-
-  - id: "cover_note_generator"
-    description: "Generate tailored cover notes from profile.yml + job details via Claude"
-    status: "active"
-    priority: "medium"
-    recurrent: false
-    depends_on: ["build_main_py"]
-
-  - id: "solaris_sync"
-    description: "Auto-insert assessed jobs into Solaris DB with fit score and status"
-    status: "active"
-    priority: "medium"
-    recurrent: false
-    depends_on: ["fit_scorer"]
-
+- id: complete_profile_yaml
+  description: Fill in config/profile.yml — exit story, proof points, visa status,
+    compensation
+  status: done
+  priority: high
+  recurrent: false
+  depends_on: []
+- id: build_main_py
+  description: 'Build main.py: read HTML files from job-hunter-agent/, parse, score
+    fit, emit outputs'
+  status: done
+  priority: high
+  recurrent: false
+  depends_on:
+  - complete_profile_yaml
+- id: process_splink
+  description: Splink — cover note drafted, added to Solaris DB. Follow up on application.
+  status: done
+  priority: high
+  recurrent: false
+  depends_on: []
+- id: process_wellfound_queue
+  description: Download and process remaining Wellfound HTML files in queue
+  status: active
+  priority: high
+  recurrent: true
+  depends_on: []
+- id: fit_scorer
+  description: 'Auto-score job fit against profile.yml: stack match, seniority, equity,
+    remote'
+  status: done
+  priority: medium
+  recurrent: false
+  depends_on:
+  - build_main_py
+- id: cover_note_generator
+  description: Generate tailored cover notes from profile.yml + job details via Claude
+  status: done
+  priority: medium
+  recurrent: false
+  depends_on:
+  - build_main_py
+- id: solaris_sync
+  description: Auto-insert assessed jobs into Solaris DB with fit score and status
+  status: done
+  priority: medium
+  recurrent: false
+  depends_on:
+  - fit_scorer
+- id: visa_status
+  description: Clarify contractor vs W-2 / visa sponsorship situation in profile.yml
+  status: active
+  priority: low
+  recurrent: false
+  depends_on: []
+- id: daily_theirstack_cron
+  description: Set up launchd cron to run --theirstack --pages 3 every morning at
+    07:00
+  status: active
+  priority: medium
+  recurrent: false
+  depends_on: []
+- id: apply_top_fits
+  description: Apply to Tenable, Fair, Instrument — cover notes ready, STRONG fits
+    86-88%
+  status: active
+  priority: high
+  recurrent: false
+  depends_on: []
 memory:
-  last_run: null
-  last_status: null
-  last_output: {}
-  notes: "Agent not yet built. Splink processed manually. Profile completion in progress."
+  last_run: '2026-04-10'
+  last_status: idle
+  last_output:
+    jobs_in_pipeline: 81
+    bookmarked: 78
+    interested: 3
+    applied: 0
+  notes: >
+    78 bookmarked, 3 interested, 0 applied. Top fits with cover notes ready:
+    Nearform 90%, Optro 90%, Versant Media 82%, Zark Lab 82%, Monarch 75%.
+    apply_top_fits is the #1 human action item — no code needed, just submit.
+    daily_theirstack_cron (launchd 07:00) still not set up.

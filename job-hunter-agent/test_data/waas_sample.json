@@ -1,0 +1,679 @@
+{
+  "companies": [
+    {
+      "id": 24347,
+      "name": "Truss",
+      "slug": "truss",
+      "batch": "S21",
+      "one_liner": "Banking for construction",
+      "hiring_description": "Truss is a YC-backed, fast-growing fintech startup, an all-in-one banking and payment automation platform for construction businesses. With Truss, construction companies can manage bill payments, receivables, and corporate cards in one place. They can save time on manual data entry by integrating Truss with their existing tools and automating the full billing cycle, from invoicing and reconciliation.",
+      "tech_description": "Python Django\r\nJavascript (Preferably ReactJS)\r\nKubernetes Cloud Infrastructure (Bonus) ",
+      "location": "San Francisco, CA, USA",
+      "team_size": 12,
+      "parent_sector": "Financial Technology and Services",
+      "child_sector": "Banking and Exchange",
+      "primary_vertical": "Financial Technology and Services -> Banking and Exchange",
+      "website_url": "/companies/truss/website",
+      "website": "https://trusspayments.com",
+      "jobs": [
+        {
+          "id": 91922,
+          "title": "Full Stack Software Engineer",
+          "eng_type": [
+            "fs"
+          ],
+          "pretty_eng_type": "Full stack",
+          "job_type": "fulltime",
+          "remote": "yes",
+          "location": null,
+          "pretty_location_or_remote": "Montreal, QC, CA / Montreal, Quebec, CA / Remote (CA)",
+          "salary_min": 150000,
+          "salary_max": 250000,
+          "pretty_salary_range": "$150K - $250K CAD",
+          "equity_min": 0.1,
+          "equity_max": 0.5,
+          "pretty_equity_range": "0.10% - 0.50%",
+          "visa": "none",
+          "pretty_sponsors_visa": "US citizenship/visa not required",
+          "skills": [
+            {
+              "id": 35,
+              "name": "Django",
+              "popularity": 61
+            },
+            {
+              "id": 99,
+              "name": "PostgreSQL",
+              "popularity": 79
+            },
+            {
+              "id": 111,
+              "name": "React",
+              "popularity": 174
+            },
+            {
+              "id": 112,
+              "name": "React Native",
+              "popularity": 70
+            },
+            {
+              "id": 138,
+              "name": "TypeScript",
+              "popularity": 45
+            },
+            {
+              "id": 312,
+              "name": "Tailwind",
+              "popularity": 0
+            }
+          ],
+          "description": "## Sanity Check\n\n1. This role is remote in Canada. Or in-person in San Francisco.\n2. We can only sponsor a TN Visa if you come to the San Francisco office (you are a Canadian citizen moving to the US).\n3. If you are remote in Canada, you must be a Canadian Citizen or a permanent resident; we will not sponsor your visa.\n4. If you are a 10X engineer, then the above does not apply to you.\n\n### **About the Role**\n\nThis isn’t a role where you’ll be ma"
+        },
+        {
+          "id": 95357,
+          "title": "Full-Stack Engineer with Design Taste",
+          "eng_type": [
+            "fs"
+          ],
+          "pretty_eng_type": "Full stack",
+          "job_type": "fulltime",
+          "remote": "yes",
+          "location": null,
+          "pretty_location_or_remote": "San Francisco, CA, US / Remote (CA)",
+          "salary_min": 150000,
+          "salary_max": 250000,
+          "pretty_salary_range": "$150K - $250K",
+          "equity_min": 0.1,
+          "equity_max": 0.5,
+          "pretty_equity_range": "0.10% - 0.50%",
+          "visa": "possible",
+          "pretty_sponsors_visa": "Will sponsor",
+          "skills": [
+            {
+              "id": 35,
+              "name": "Django",
+              "popularity": 61
+            },
+            {
+              "id": 99,
+              "name": "PostgreSQL",
+              "popularity": 79
+            },
+            {
+              "id": 107,
+              "name": "Python",
+              "popularity": 288
+            },
+            {
+              "id": 111,
+              "name": "React",
+              "popularity": 174
+            },
+            {
+              "id": 112,
+              "name": "React Native",
+              "popularity": 70
+            },
+            {
+              "id": 138,
+              "name": "TypeScript",
+              "popularity": 45
+            },
+            {
+              "id": 290,
+              "name": "Design systems",
+              "popularity": 0
+            },
+            {
+              "id": 294,
+              "name": "Marketing design",
+              "popularity": 0
+            }
+          ],
+          "description": "# Full-Stack Engineer with Design Taste\n\nSan Francisco, CA, US / Remote (CA) Full-time • Engineering, Full stack • 4+ years\n\n---\n\n## Sanity Check\n\n1. This role is remote in Canada. Or in-person in San Francisco.\n2. We can only sponsor a TN Visa if you come to the San Francisco office (you are a Canadian citizen moving to the US).\n3. If you are remote in Canada, you must be a Canadian Citizen or a permanent resident; we will not sponsor your visa."
+        },
+        {
+          "id": 94646,
+          "title": "Design-Focused React Native Engineer",
+          "eng_type": [
+            "fe"
+          ],
+          "pretty_eng_type": "Frontend",
+          "job_type": "fulltime",
+          "remote": "yes",
+          "location": null,
+          "pretty_location_or_remote": "San Francisco, CA, US / Remote (CA)",
+          "salary_min": 125000,
+          "salary_max": 175000,
+          "pretty_salary_range": "$125K - $175K",
+          "equity_min": 0.01,
+          "equity_max": 0.1,
+          "pretty_equity_range": "0.01% - 0.10%",
+          "visa": "none",
+          "pretty_sponsors_visa": "US citizenship/visa not required",
+          "skills": [
+            {
+              "id": 6,
+              "name": "Android",
+              "popularity": 46
+            },
+            {
+              "id": 61,
+              "name": "iOS",
+              "popularity": 35
+            },
+            {
+              "id": 112,
+              "name": "React Native",
+              "popularity": 70
+            },
+            {
+              "id": 290,
+              "name": "Design systems",
+              "popularity": 0
+            }
+          ],
+          "description": "## Sanity Check\n\n1. This role is remote in Canada. Or in-person in San Francisco.\n2. We can only sponsor a TN Visa if you come to the San Francisco office (you are a Canadian citizen moving to the US).\n3. If you are remote in Canada, you must be a Canadian Citizen or a permanent resident; we will not sponsor your visa.\n\n## About the Role\n\nThis isn't a role where you'll be tweaking padding on someone else's components or shipping reskins of web fl"
+        },
+        {
+          "id": 94538,
+          "title": "Back Office Engineer",
+          "eng_type": [
+            "fs"
+          ],
+          "pretty_eng_type": "Full stack",
+          "job_type": "fulltime",
+          "remote": "yes",
+          "location": null,
+          "pretty_location_or_remote": "San Francisco, CA, US / Remote (CA)",
+          "salary_min": 110000,
+          "salary_max": 175000,
+          "pretty_salary_range": "$110K - $175K CAD",
+          "equity_min": 0.05,
+          "equity_max": 0.1,
+          "pretty_equity_range": "0.05% - 0.10%",
+          "visa": "none",
+          "pretty_sponsors_visa": "US citizenship/visa not required",
+          "skills": [
+            {
+              "id": 331,
+              "name": "AI Agents",
+              "popularity": 0
+            }
+          ],
+          "description": "## Location\n\nIn-person positions are available in San Francisco, or remote opportunities are offered for candidates in Canada. We do not hire remote employees in the US, only in Canada.\n\n### The Role\n\nTruss runs a custom-built back office that powers our reviews, case work, and risk decisions. It works — but most of it still runs through human review, and the volume is only going up. We're hiring a Back Office Engineer to change that.\n\nYour job i"
+        },
+        {
+          "id": 92608,
+          "title": "Senior Full-Stack & DevOps Engineer",
+          "eng_type": [
+            "devops"
+          ],
+          "pretty_eng_type": "Devops",
+          "job_type": "fulltime",
+          "remote": "only",
+          "location": null,
+          "pretty_location_or_remote": "CA / Remote (CA)",
+          "salary_min": 150000,
+          "salary_max": 250000,
+          "pretty_salary_range": "$150K - $250K CAD",
+          "equity_min": 0.1,
+          "equity_max": 0.5,
+          "pretty_equity_range": "0.10% - 0.50%",
+          "visa": "none",
+          "pretty_sponsors_visa": "US citizenship/visa not required",
+          "skills": [
+            {
+              "id": 35,
+              "name": "Django",
+              "popularity": 61
+            },
+            {
+              "id": 50,
+              "name": "Google Cloud",
+              "popularity": 26
+            },
+            {
+              "id": 99,
+              "name": "PostgreSQL",
+              "popularity": 79
+            },
+            {
+              "id": 107,
+              "name": "Python",
+              "popularity": 288
+            },
+            {
+              "id": 111,
+              "name": "React",
+              "popularity": 174
+            },
+            {
+              "id": 323,
+              "name": "Terraform",
+              "popularity": 0
+            }
+          ],
+          "description": "## About Truss\n\nWe started by building a B2B payment platform in Canada called MazumaGo — and discovered that most of our customers were construction companies. Contractors, subcontractors, custom home builders, flooring installers — businesses that still get paid by check because the existing digital tools ([Bill.com](http://Bill.com), Stripe, Square) weren't built for how construction actually works.\n\nWe took everything we learned and pivoted t"
+        }
+      ]
+    },
+    {
+      "id": 29790,
+      "name": "YouShift",
+      "slug": "youshift",
+      "batch": "W25",
+      "one_liner": "The OS for hospital workforce management",
+      "hiring_description": "YouShift is transforming how hospitals and clinics manage staff scheduling. Founded by a team of engineers and healthcare experts from Harvard, we’re building the next-generation workforce management platform for healthcare—starting with AI-powered shift scheduling.\r\n\r\nBorn from firsthand experience watching family members in medicine struggle with chaotic, burnout-inducing schedules, YouShift is on a mission to bring fairness, flexibility, and intelligence to healthcare staffing.\r\n\r\nUnlike traditional tools that replicate spreadsheets or require manual input, YouShift leverages cutting-edge optimization algorithms and agentic AI to create shift schedules that respect both hospital needs and staff preferences. We’re replacing outdated admin-heavy workflows with a modern, automated platform that empowers doctors and nurses to have a voice in their schedules.",
+      "tech_description": "React, tRPC, TypeScript, Tailwind, Drizzle ORM, PostgreSQL for full-stack web development. Python + Gurobi for complex scheduling optimization.",
+      "location": "New York, NY, USA",
+      "team_size": 10,
+      "parent_sector": "B2B Software and Services",
+      "child_sector": "Human Resources",
+      "primary_vertical": "B2B Software and Services -> Human Resources",
+      "website_url": "/companies/youshift/website",
+      "website": "https://www.you-shift.com/",
+      "jobs": [
+        {
+          "id": 91201,
+          "title": "Full-Stack Software Engineer",
+          "eng_type": [
+            "fs"
+          ],
+          "pretty_eng_type": "Full stack",
+          "job_type": "fulltime",
+          "remote": "yes",
+          "location": null,
+          "pretty_location_or_remote": "New York, NY, US / Barcelona, CT, ES / Barcelona, Catalonia, ES / València, VC, ES / València, Valencian Community, ES / Madrid, MD, ES / Madrid, Community of Madrid, ES / Remote (ES; US)",
+          "salary_min": 40000,
+          "salary_max": 90000,
+          "pretty_salary_range": "$40K - $90K",
+          "equity_min": 0.1,
+          "equity_max": 2.0,
+          "pretty_equity_range": "0.10% - 2.00%",
+          "visa": "none",
+          "pretty_sponsors_visa": "US citizenship/visa not required",
+          "skills": [
+            {
+              "id": 5,
+              "name": "Amazon Web Services (AWS)",
+              "popularity": 125
+            },
+            {
+              "id": 90,
+              "name": "Node.js",
+              "popularity": 144
+            },
+            {
+              "id": 99,
+              "name": "PostgreSQL",
+              "popularity": 79
+            },
+            {
+              "id": 111,
+              "name": "React",
+              "popularity": 174
+            },
+            {
+              "id": 112,
+              "name": "React Native",
+              "popularity": 70
+            },
+            {
+              "id": 138,
+              "name": "TypeScript",
+              "popularity": 45
+            }
+          ],
+          "description": "### **About YouShift**\n\nHealthcare runs on people — but the systems that manage them are outdated. At YouShift, we’re building the AI-powered workforce OS for healthcare teams. Our platform replaces spreadsheets and fragmented legacy tools with an intelligent scheduling engine managed by AI agents that handles complex rules, compliance, and real-world operational constraints at scale.\n\nOur investors include Y Combinator (YC) and Bain Capital Vent"
+        },
+        {
+          "id": 94196,
+          "title": "Customer Success Manager",
+          "eng_type": null,
+          "pretty_eng_type": "",
+          "job_type": "fulltime",
+          "remote": "only",
+          "location": null,
+          "pretty_location_or_remote": "MX / CO / ES / Remote (MX; CO; ES)",
+          "salary_min": 15000,
+          "salary_max": 35000,
+          "pretty_salary_range": "$15K - $35K",
+          "equity_min": null,
+          "equity_max": null,
+          "pretty_equity_range": "",
+          "visa": "none",
+          "pretty_sponsors_visa": "US citizenship/visa not required",
+          "skills": [],
+          "description": "**Why YouShift exists**\n\nYouShift automates clinical scheduling end-to-end. Admins configure their group's rules once (coverage requirements, fairness constraints, physician contracts, time-off policies) and our engine generates optimized schedules in minutes instead of the days it takes manually. Clinicians submit shift preferences and time-off requests through the app, swap shifts with each other directly, and get visibility into their schedule"
+        }
+      ]
+    },
+    {
+      "id": 30662,
+      "name": "DeepAware AI",
+      "slug": "deepaware-ai",
+      "batch": "S25",
+      "one_liner": "Robots, parts & RL environments - delivered in 72 hrs or pickup in SF.",
+      "hiring_description": "DeepAware (Silicon Valley Robotics Center) builds the full stack for physical AI — spanning hardware, data, and training.\r\n\r\nWe source and ship robots and robotics parts across the US within 72 hours: humanoid robots, quadrupeds, robotic arms, tactile sensors, cameras, and dexterous hands. Beyond hardware, we help enterprises collect teleoperation data, build reinforcement learning environments, and deploy robots into production.\r\n\r\nOur early customers include AI data centers, industrial operations, research labs, and event producers. We're solving real problems at the intersection of AI, robotics, and supply chain — and we're moving fast.\r\n\r\nIf you're excited about building the physical automation layer for the AI era, and want to work across software, hardware, and real-world deployment — you'll fit right in at DeepAware.",
+      "tech_description": "DeepAware (Silicon Valley Robotics Center) operates across three layers of the robotics stack:\r\n\r\n**Hardware supply chain.** We source robots and parts from leading global manufacturers (Unitree, Deep Robotics, Paxini, Intel Realsense, OpenArm, and more) and run a fast-turn inventory and logistics operation — getting any SKU into US customers' hands within 72 hours.\r\n\r\n**Data and training.** We build teleoperation data collection pipelines, simulation environments in Isaac Gym / MuJoCo, and reinforcement learning policies for manipulation and locomotion. Much of this lives at the sim-to-real boundary, which is where most of the hard engineering is.\r\n\r\n**Deployment.** We integrate robots into real-world environments — AI data centers (cable management, inspection, thermal monitoring), industrial floors (quality inspection, material handling), and live events (interactive humanoid demos with scripted interaction flows).\r\n\r\nOur stack includes Python, ROS2, PyTorch, Isaac Sim/Lab, custom teleoperation rigs, and integrations with inventory/logistics systems. We're a small, fast-moving team that ships.",
+      "location": "San Francisco, CA, USA",
+      "team_size": 2,
+      "parent_sector": "Industrials",
+      "child_sector": "Manufacturing and Robotics",
+      "primary_vertical": "Industrials -> Manufacturing and Robotics",
+      "website_url": "/companies/deepaware-ai/website",
+      "website": "https://roboticscenter.ai/",
+      "jobs": [
+        {
+          "id": 79913,
+          "title": "AI/ML Engineer",
+          "eng_type": [
+            "ml"
+          ],
+          "pretty_eng_type": "Machine learning",
+          "job_type": "fulltime",
+          "remote": "yes",
+          "location": null,
+          "pretty_location_or_remote": "San Francisco, CA, US / Remote",
+          "salary_min": 130000,
+          "salary_max": 170000,
+          "pretty_salary_range": "$130K - $170K",
+          "equity_min": null,
+          "equity_max": null,
+          "pretty_equity_range": "",
+          "visa": "possible",
+          "pretty_sponsors_visa": "Will sponsor",
+          "skills": [],
+          "description": "**About the Role**\\\r\nDeepAware AI (YC S25) is building secure, efficient, and autonomous infrastructure for the AI era. As an AI/ML Engineer, you’ll design, build, and deploy machine learning models that power our next-generation Data Center Infrastructure Management (DCIM) platform. Your work will focus on **reinforcement learning** for intelligent workload scheduling, **optimization algorithms** for energy and cost savings, and **anomaly detect"
+        },
+        {
+          "id": 79914,
+          "title": "Business Development Manager",
+          "eng_type": null,
+          "pretty_eng_type": "",
+          "job_type": "fulltime",
+          "remote": "yes",
+          "location": null,
+          "pretty_location_or_remote": "San Francisco, CA, US / Remote (US)",
+          "salary_min": 100000,
+          "salary_max": 140000,
+          "pretty_salary_range": "$100K - $140K",
+          "equity_min": null,
+          "equity_max": null,
+          "pretty_equity_range": "",
+          "visa": "yes",
+          "pretty_sponsors_visa": "US citizen/visa only",
+          "skills": [],
+          "description": "**About the Role**\\\r\nDeepAware AI (YC S25) is building secure, efficient, and autonomous infrastructure for the AI era. As our **Business Development Manager**, you’ll be responsible for driving growth by forging partnerships with **data center operators** and other key players in the AI infrastructure ecosystem. You’ll lead pilot deployments, close strategic deals, and help scale DeepAware’s market presence globally.\r\n\r\nYou’ll be joining a fast-"
+        },
+        {
+          "id": 79915,
+          "title": "Robotics Engineer",
+          "eng_type": [
+            "robotics"
+          ],
+          "pretty_eng_type": "Robotics",
+          "job_type": "fulltime",
+          "remote": "no",
+          "location": null,
+          "pretty_location_or_remote": "San Francisco, CA, US",
+          "salary_min": 120000,
+          "salary_max": 165000,
+          "pretty_salary_range": "$120K - $165K",
+          "equity_min": null,
+          "equity_max": null,
+          "pretty_equity_range": "",
+          "visa": "possible",
+          "pretty_sponsors_visa": "Will sponsor",
+          "skills": [],
+          "description": "**About the Role**\\\r\nDeepAware AI (YC S25) is building secure, efficient, and autonomous infrastructure for the AI era. As a **Robotics Engineer**, you’ll develop and integrate autonomous systems that enable **24/7 inspections, cable swaps, and maintenance** in large-scale data centers. Your work will bridge the gap between physical robotics and our AI-powered Data Center Infrastructure Management (DCIM) platform — creating the “robotic hands” fo"
+        }
+      ]
+    },
+    {
+      "id": 531,
+      "name": "DoorDash",
+      "slug": "doordash",
+      "batch": "S13",
+      "one_liner": "Restaurant delivery.",
+      "hiring_description": "DoorDash is a technology company that is building the next generation of local delivery. We operate a full stack delivery service: by partnering with merchants, hiring our own drivers, and building our own logistics software, we are able to control the entire delivery experience to make it more efficient for everyone.\r\n\r\nOur team is looking to grow with talented people who want to build much more than just a food delivery company. We help small businesses grow, give underemployed people meaningful work, and offer affordable convenience to consumers.\r\n\r\nOur investors include Sequoia Capital, Khosla Ventures, Charles River Ventures, Andreesen Horowitz, SV Angel, Y Combinator and many others.\r\n\r\nWe're looking to expand the founding team with talented people who are excited about our mission to empower local economies and build out the world's first real-time logistics company.\r\n\r\nDoorDash is based in San Francisco, CA.",
+      "tech_description": "",
+      "location": "San Francisco, CA, USA",
+      "team_size": 8600,
+      "parent_sector": "Consumer",
+      "child_sector": "Food and Beverage",
+      "primary_vertical": "Consumer -> Food and Beverage",
+      "website_url": "/companies/doordash/website",
+      "website": "http://doordash.com",
+      "jobs": [
+        {
+          "id": 68748,
+          "title": "Engineering Manager, Storefront",
+          "eng_type": [
+            "eng_mgmt"
+          ],
+          "pretty_eng_type": "Engineering manager",
+          "job_type": "fulltime",
+          "remote": "no",
+          "location": null,
+          "pretty_location_or_remote": "San Francisco, CA, US / Seattle, WA, US",
+          "salary_min": 201900,
+          "salary_max": 302900,
+          "pretty_salary_range": "$202K - $303K",
+          "equity_min": null,
+          "equity_max": null,
+          "pretty_equity_range": "",
+          "visa": "yes",
+          "pretty_sponsors_visa": "US citizen/visa only",
+          "skills": [],
+          "description": "# **About the Team**\r\n\r\n[Storefront](https://get.doordash.com/en-us/products/storefront) is a digital ordering solution that harnesses the technology and scale of DoorDash marketplace to help any business establish an online presence and grow their own online ordering sales.\r\n\r\nThe Merchant Satisfaction team ensures that all merchants can easily discover, onboard, and grow their business on the Storefront platform. The team aims to create a smoot"
+        },
+        {
+          "id": 45996,
+          "title": "Engineering Manager, Core Platform   ",
+          "eng_type": [
+            "fs"
+          ],
+          "pretty_eng_type": "Full stack",
+          "job_type": "fulltime",
+          "remote": "yes",
+          "location": null,
+          "pretty_location_or_remote": "United States / Remote (US)",
+          "salary_min": null,
+          "salary_max": null,
+          "pretty_salary_range": "",
+          "equity_min": null,
+          "equity_max": null,
+          "pretty_equity_range": "",
+          "visa": "yes",
+          "pretty_sponsors_visa": "US citizen/visa only",
+          "skills": [],
+          "description": "Come help us build the world's most reliable on-demand, logistics engine for delivery! We're bringing on experienced engineers to help us create and maintain a 24x7, no downtime, global infrastructure system that powers DoorDash’s three-sided marketplace of consumers, merchants, and dashers.\n\nAt DoorDash, our software engineers work on everything from backend systems to beautiful and thoughtful user interfaces, to scaling products that will autom"
+        },
+        {
+          "id": 68749,
+          "title": "Staff iOS Engineer, Storefront",
+          "eng_type": [
+            "ios"
+          ],
+          "pretty_eng_type": "iOS",
+          "job_type": "fulltime",
+          "remote": "no",
+          "location": null,
+          "pretty_location_or_remote": "San Francisco, CA, US / Seattle, WA, US",
+          "salary_min": 119100,
+          "salary_max": 252400,
+          "pretty_salary_range": "$119K - $252K",
+          "equity_min": null,
+          "equity_max": null,
+          "pretty_equity_range": "",
+          "visa": "yes",
+          "pretty_sponsors_visa": "US citizen/visa only",
+          "skills": [
+            {
+              "id": 61,
+              "name": "iOS",
+              "popularity": 35
+            }
+          ],
+          "description": "# **About the Role**\r\n\r\n[Storefront](https://get.doordash.com/en-us/products/storefront) is a digital ordering solution that harnesses the technology and scale of DoorDash marketplace to help any business establish an online presence and grow their own online ordering sales. \r\n\r\nOur mission is to revolutionize the future of ecommerce by creating robust white-label mobile apps that empower merchants to compete and thrive in the digital era. Come h"
+        },
+        {
+          "id": 249,
+          "title": "Software Engineer, Android",
+          "eng_type": [
+            "android"
+          ],
+          "pretty_eng_type": "Android",
+          "job_type": "fulltime",
+          "remote": "no",
+          "location": null,
+          "pretty_location_or_remote": "901 Market, SF, CA 94105",
+          "salary_min": 0,
+          "salary_max": 0,
+          "pretty_salary_range": "",
+          "equity_min": 0.0,
+          "equity_max": 0.0,
+          "pretty_equity_range": "",
+          "visa": "yes",
+          "pretty_sponsors_visa": "US citizen/visa only",
+          "skills": [
+            {
+              "id": 6,
+              "name": "Android",
+              "popularity": 46
+            },
+            {
+              "id": 69,
+              "name": "Kotlin",
+              "popularity": 15
+            }
+          ],
+          "description": "**What You’ll Achieve**\r\n\r\n- Be an owner of the architecture of our Android applications\r\n- Scale our test infrastructure and automate releases\r\n- Introduce tools and best practices that accelerate our development process\r\n- Build awesome product features to improve our marketplace\r\n\r\n**About you**\r\n\r\n- High-energy and courageous - you’ll do what it takes to win\r\n- You’re an owner - driven, focused, and quick to take ownership of your work\r\n- Hum"
+        },
+        {
+          "id": 44382,
+          "title": "Software Engineer, Core Platform",
+          "eng_type": [
+            "be"
+          ],
+          "pretty_eng_type": "Backend",
+          "job_type": "fulltime",
+          "remote": "yes",
+          "location": null,
+          "pretty_location_or_remote": "100% Remote / Remote",
+          "salary_min": null,
+          "salary_max": null,
+          "pretty_salary_range": "",
+          "equity_min": null,
+          "equity_max": null,
+          "pretty_equity_range": "",
+          "visa": "possible",
+          "pretty_sponsors_visa": "Will sponsor",
+          "skills": [
+            {
+              "id": 49,
+              "name": "Go",
+              "popularity": 50
+            },
+            {
+              "id": 62,
+              "name": "Java",
+              "popularity": 163
+            },
+            {
+              "id": 69,
+              "name": "Kotlin",
+              "popularity": 15
+            },
+            {
+              "id": 107,
+              "name": "Python",
+              "popularity": 288
+            },
+            {
+              "id": 182,
+              "name": "Distributed Systems",
+              "popularity": 3
+            }
+          ],
+          "description": "Come help us build the world's most reliable on-demand, logistics engine for delivery! We're bringing on experienced engineers to help us create and maintain a 24x7, no downtime, global infrastructure system that powers DoorDash’s three-sided marketplace of consumers, merchants, and dashers.\r\n\r\n \r\n\r\nAt DoorDash, our software engineers work on everything from backend systems to beautiful and thoughtful user interfaces, to scaling products that wil"
+        },
+        {
+          "id": 46703,
+          "title": "Software Engineer, Distributed Databases",
+          "eng_type": [
+            "be"
+          ],
+          "pretty_eng_type": "Backend",
+          "job_type": "fulltime",
+          "remote": "yes",
+          "location": null,
+          "pretty_location_or_remote": "Remote",
+          "salary_min": null,
+          "salary_max": null,
+          "pretty_salary_range": "",
+          "equity_min": null,
+          "equity_max": null,
+          "pretty_equity_range": "",
+          "visa": "possible",
+          "pretty_sponsors_visa": "Will sponsor",
+          "skills": [
+            {
+              "id": 24,
+              "name": "Cassandra",
+              "popularity": 7
+            },
+            {
+              "id": 49,
+              "name": "Go",
+              "popularity": 50
+            },
+            {
+              "id": 87,
+              "name": "MySQL",
+              "popularity": 129
+            },
+            {
+              "id": 99,
+              "name": "PostgreSQL",
+              "popularity": 79
+            },
+            {
+              "id": 114,
+              "name": "Redis",
+              "popularity": 26
+            },
+            {
+              "id": 159,
+              "name": "SQL Server",
+              "popularity": 2
+            },
+            {
+              "id": 164,
+              "name": "DynamoDB",
+              "popularity": 1
+            },
+            {
+              "id": 165,
+              "name": "RDS/Aurora",
+              "popularity": 1
+            },
+            {
+              "id": 182,
+              "name": "Distributed Systems",
+              "popularity": 3
+            },
+            {
+              "id": 224,
+              "name": "Data Modeling",
+              "popularity": 2
+            }
+          ],
+          "description": "About the Team\r\nThe mission of the Database and Messaging team is to build and operate online stateful systems that are reliable, scalable, and easy to use for the rest of DoorDash engineering. The team is responsible for providing foundational infrastructure for all of the Core Storage, Caching, and Messaging use cases at DoorDash. We work on CockroachDB, Kafka, AWS Aurora, Cassandra, and AWS ElastiCache for now. We are bootstrapping some long t"
+        }
+      ]
+    }
+  ]
+}

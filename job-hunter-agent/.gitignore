@@ -2,3 +2,11 @@
 *.html
 *_files/
 config/profile.yml   # contains personal info
+
+# Scraped data dumps — regenerable, not source
+waas_dump*.json
+
+# Secrets and runtime state
+.env
+.processed
+__pycache__/
