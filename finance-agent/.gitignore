@@ -1,0 +1,9 @@
+# Personal bank screenshots / financial captures — never commit
+current-assets/
+
+# Local DB (also covered by root *.db but explicit here for clarity)
+finance.db
+finance.db-*
+
+# Logs
+*.log
