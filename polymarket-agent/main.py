@@ -68,6 +68,25 @@ def _read_state() -> tuple[str | None, int, int]:
 # ---------------------------------------------------------------------------
 # Scan loop
 # ---------------------------------------------------------------------------
+def _run_btc_scan() -> None:
+    """Read-only BTC scanner cycle: find, rank, snapshot. No bets placed."""
+    import btc_scanner
+    from pathlib import Path
+    try:
+        candidates = btc_scanner.find_btc_threshold_candidates(limit=config.BTC_TOP_N)
+        out = Path(__file__).parent / "btc_candidates.json"
+        btc_scanner.snapshot(candidates, out)
+        top = candidates[0] if candidates else None
+        logger.info(
+            "BTC scan: %d candidates | top: %s | edge=%.1f%%",
+            len(candidates),
+            (top.question[:50] if top else "—"),
+            ((top.edge or 0) * 100 if top else 0.0),
+        )
+    except Exception as exc:
+        logger.error("BTC scan failed: %s", exc)
+
+
 def _run_scan():
     logger.info("=== SCAN STARTED ===")
     try:
@@ -208,6 +227,31 @@ def _validate_live_mode() -> None:
 # Main entry-point
 # ---------------------------------------------------------------------------
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Polymarket Agent")
+    parser.add_argument(
+        "--btc-scan",
+        action="store_true",
+        help="Run the BTC threshold scanner once (read-only), print + snapshot, exit.",
+    )
+    args = parser.parse_args()
+
+    if args.btc_scan:
+        import btc_scanner
+        from pathlib import Path
+        logger.info("Running BTC threshold scanner (one-shot, read-only)…")
+        candidates = btc_scanner.find_btc_threshold_candidates(limit=config.BTC_TOP_N)
+        out = Path(__file__).parent / "btc_candidates.json"
+        btc_scanner.snapshot(candidates, out)
+        print(f"\n{'rank':<4} {'edge':>6} {'score':>6} {'days':>4} {'kelly':>6}  question")
+        print("-" * 92)
+        for i, c in enumerate(candidates, 1):
+            edge = (c.edge or 0) * 100
+            days = c.days_to_expiry if c.days_to_expiry is not None else "—"
+            print(f"{i:<4} {edge:5.1f}% {c.score:6.2f} {str(days):>4} ${c.kelly_stake:5.2f}  {c.question[:55]}")
+        print(f"\n→ Snapshot written to {out} ({len(candidates)} candidates)")
+        return
+
     mode = "LIVE" if not config.DRY_RUN else "DRY-RUN"
     logger.info("Polymarket Agent starting… [%s]", mode)
     database.init_db()
@@ -252,9 +296,25 @@ def main():
         name="web",
     )
 
+    # BTC scanner thread — read-only, opt-in via BTC_SCANNER_ENABLED env
+    btc_thread = None
+    if config.BTC_SCANNER_ENABLED:
+        btc_thread = threading.Thread(
+            target=_scheduler_thread,
+            args=(_run_btc_scan, config.BTC_SCAN_INTERVAL_MINUTES, "next_btc_scan_secs"),
+            daemon=True,
+            name="btc_scan",
+        )
+
     scan_thread.start()
     track_thread.start()
     web_thread.start()
+    if btc_thread:
+        btc_thread.start()
+        logger.info(
+            "BTC scanner thread started (read-only, every %d min)",
+            config.BTC_SCAN_INTERVAL_MINUTES,
+        )
 
     logger.info(
         "All threads started. Web UI → http://localhost:%d  |  Logs → agent.log",

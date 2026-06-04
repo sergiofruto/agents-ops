@@ -1,0 +1,3 @@
+# BTC scanner outputs (read-only, regenerable)
+btc_candidates.json
+btc_scanner.log

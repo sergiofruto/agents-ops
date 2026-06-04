@@ -38,6 +38,11 @@ MARKET_COOLDOWN_DAYS = int(os.getenv("MARKET_COOLDOWN_DAYS", "7"))
 # Per-category open bet cap (prevents 3× Bitcoin bets, etc.)
 MAX_BETS_PER_CATEGORY = int(os.getenv("MAX_BETS_PER_CATEGORY", "2"))
 
+# ── BTC scanner (read-only, v1 — no bets placed) ─────────────────────────
+BTC_SCANNER_ENABLED       = os.getenv("BTC_SCANNER_ENABLED", "true").lower() == "true"
+BTC_SCAN_INTERVAL_MINUTES = int(os.getenv("BTC_SCAN_INTERVAL_MINUTES", "15"))
+BTC_TOP_N                 = int(os.getenv("BTC_TOP_N", "20"))
+
 # Stop-loss / take-profit
 STOP_LOSS_PPTS    = float(os.getenv("STOP_LOSS_PPTS",    "0.20"))  # close if price drops 20pp from entry
 TAKE_PROFIT_PPTS  = float(os.getenv("TAKE_PROFIT_PPTS",  "0.10"))  # close if price rises 10pp from entry
