@@ -1,4 +1,3 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { CoordinatorAgent } from "@/lib/types";
 
 function statusColor(status: CoordinatorAgent["last_status"]) {
@@ -131,12 +130,12 @@ export default function CoordinatorSection({ agents }: { agents: CoordinatorAgen
   const blockedCount = agents.reduce((n, a) => n + a.blocked.length, 0);
 
   return (
-    <Card className="bg-white/5 border-white/10">
-      <CardHeader className="pb-3">
+    <div className="rounded-xl border border-white/10 bg-white/5">
+      <div className="pb-3 p-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-semibold text-zinc-100">
+          <h3 className="text-base font-semibold text-zinc-100">
             Coordinator
-          </CardTitle>
+          </h3>
           <div className="flex items-center gap-3 text-[11px] text-zinc-500">
             {errorCount > 0 && (
               <span className="text-red-400">{errorCount} error{errorCount > 1 ? "s" : ""}</span>
@@ -149,12 +148,12 @@ export default function CoordinatorSection({ agents }: { agents: CoordinatorAgen
             )}
           </div>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-2">
+      </div>
+      <div className="space-y-2 px-4 pb-4">
         {agents.map((agent) => (
           <AgentRow key={agent.id} agent={agent} />
         ))}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

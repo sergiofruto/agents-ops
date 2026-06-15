@@ -1,12 +1,42 @@
 import { Suspense } from "react";
 import { getPolymarketStats, getDotaStats, getJobs, getPipeline } from "@/lib/queries";
 import { getBtc, getStocks, getFearGreed } from "@/lib/market";
-import CollapsibleSection from "@/components/CollapsibleSection";
 import AgentCard from "@/components/AgentCard";
-import MarketSection from "@/components/MarketSection";
-import RebrandingChecklist from "@/components/RebrandingChecklist";
+import BtcCard from "@/components/BtcCard";
+import FearGreedCard from "@/components/FearGreedCard";
 import { JobsList } from "@/components/JobsList";
 import { FinanceCard } from "@/components/FinanceCard";
+import RebrandingChecklist from "@/components/RebrandingChecklist";
+import type { StockItem } from "@/lib/types";
+
+function StocksStrip({ stocks }: { stocks: StockItem[] }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {stocks.map((s) => {
+        const isPositive = (s.change_pct ?? 0) >= 0;
+        const chgColor = s.change_pct == null
+          ? "text-[#475569]"
+          : isPositive ? "text-[#34d399]" : "text-[#f87171]";
+        return (
+          <div
+            key={s.ticker}
+            className="bg-[#0f1a2e] border border-[#1e3a5f] rounded-lg px-3 py-2 min-w-[80px]"
+          >
+            <div className="text-[11.5px] font-medium text-[#60a5fa]">{s.ticker}</div>
+            <div className="text-[14px] font-semibold text-[#f1f5f9] mt-0.5">
+              {s.price != null ? `$${s.price.toFixed(2)}` : "—"}
+            </div>
+            <div className={`text-[11.5px] ${chgColor}`}>
+              {s.change_pct != null
+                ? `${isPositive ? "+" : ""}${s.change_pct}%`
+                : "—"}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export default async function DashboardPage() {
   const [polymarket, dota, jobs, pipeline, btc, stocks, fearGreed] = await Promise.all([
@@ -22,31 +52,24 @@ export default async function DashboardPage() {
   ]);
 
   return (
-    <div className="space-y-4">
-      <CollapsibleSection title="Agents">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <AgentCard name="Polymarket" href="/polymarket" stats={polymarket} icon="📈" />
-          <AgentCard name="Dota 2" href="/dota" stats={dota} icon="🎮" />
-        </div>
-      </CollapsibleSection>
+    <div className="flex flex-col gap-6">
+      {/* 2×2 KPI grid */}
+      <div className="grid grid-cols-2 gap-4">
+        <AgentCard name="Polymarket" href="/polymarket" stats={polymarket} />
+        <BtcCard btc={btc} />
+        <AgentCard name="Dota 2" href="/dota" stats={dota} />
+        <FearGreedCard fearGreed={fearGreed} />
+      </div>
 
-      <CollapsibleSection title="Markets">
-        <MarketSection btc={btc} stocks={stocks} fearGreed={fearGreed} />
-      </CollapsibleSection>
+      {/* Stocks strip */}
+      {stocks.length > 0 && <StocksStrip stocks={stocks} />}
 
-      <CollapsibleSection title="Finance">
-        <FinanceCard />
-      </CollapsibleSection>
-
-      <CollapsibleSection title="Rebranding Checklist">
-        <Suspense fallback={null}>
-          <RebrandingChecklist />
-        </Suspense>
-      </CollapsibleSection>
-
-      <CollapsibleSection title="Job Tracker">
-        <JobsList jobs={jobs} pipeline={pipeline} />
-      </CollapsibleSection>
+      {/* Full-width sections */}
+      <JobsList jobs={jobs} pipeline={pipeline} />
+      <FinanceCard />
+      <Suspense fallback={null}>
+        <RebrandingChecklist />
+      </Suspense>
     </div>
   );
 }
