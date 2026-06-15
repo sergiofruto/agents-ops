@@ -1,3 +1,5 @@
+"use client";
+
 import { Badge } from "@tremor/react";
 
 type Mode = "LIVE" | "DRY RUN" | "OFFLINE";

@@ -1,3 +1,5 @@
+"use client";
+
 import { AreaChart } from "@tremor/react";
 import type { BtcData } from "@/lib/types";
 

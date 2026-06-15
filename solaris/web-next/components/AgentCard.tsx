@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { StatusBadge } from "./StatusBadge";
 import type { PolymarketStats, DotaStats } from "@/lib/types";

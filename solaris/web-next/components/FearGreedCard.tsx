@@ -1,3 +1,5 @@
+"use client";
+
 import { ProgressBar } from "@tremor/react";
 import type { FearGreed } from "@/lib/types";
 
