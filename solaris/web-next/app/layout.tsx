@@ -1,19 +1,12 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, Space_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
-import { TooltipProvider } from "@/components/ui/tooltip";
 
-const spaceGrotesk = Space_Grotesk({
+const inter = Inter({
   variable: "--font-sans",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "700"],
-});
-
-const spaceMono = Space_Mono({
-  variable: "--font-mono",
-  subsets: ["latin"],
-  weight: ["400", "700"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -21,26 +14,30 @@ export const metadata: Metadata = {
   description: "Personal dashboard — agents, markets, jobs",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`dark ${spaceGrotesk.variable} ${spaceMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col" style={{ backgroundColor: "#000000", color: "#E8E8E8", fontFamily: "var(--font-sans), system-ui, sans-serif" }}>
-
-        {/* Sticky navbar */}
-        <header className="sticky top-0 z-50" style={{ borderBottom: "1px solid #222222", backgroundColor: "#000000" }}>
+    <html lang="en" className={`${inter.variable} h-full antialiased`}>
+      <body
+        className="min-h-full flex flex-col"
+        style={{
+          backgroundColor: "#0a0f1e",
+          color: "#f1f5f9",
+          fontFamily: "var(--font-sans), system-ui, sans-serif",
+        }}
+      >
+        <header className="sticky top-0 z-50 border-b border-[#1a2744] bg-[#0a0f1e]">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
             <Link
               href="/"
-              className="transition-colors"
-              style={{ fontFamily: "var(--font-mono), monospace", fontSize: "13px", fontWeight: 700, letterSpacing: "0.08em", color: "#FFFFFF" }}
+              className="text-[15px] font-bold tracking-[0.08em]"
+              style={{
+                background: "linear-gradient(90deg, #60a5fa, #a78bfa)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
             >
               SOLARIS
             </Link>
-
             <nav className="flex items-center gap-8">
               {[
                 { href: "/", label: "HOME" },
@@ -50,8 +47,7 @@ export default function RootLayout({
                 <Link
                   key={href}
                   href={href}
-                  className="transition-colors hover:text-white"
-                  style={{ fontFamily: "var(--font-mono), monospace", fontSize: "11px", fontWeight: 400, letterSpacing: "0.08em", color: "#666666" }}
+                  className="text-[12.5px] text-[#475569] hover:text-[#f1f5f9] transition-colors"
                 >
                   {label}
                 </Link>
@@ -60,11 +56,9 @@ export default function RootLayout({
           </div>
         </header>
 
-        <TooltipProvider>
-          <main className="flex-1 mx-auto w-full max-w-7xl px-6 py-8">
-            {children}
-          </main>
-        </TooltipProvider>
+        <main className="flex-1 mx-auto w-full max-w-7xl px-6 py-8">
+          {children}
+        </main>
       </body>
     </html>
   );
