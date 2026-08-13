@@ -23,11 +23,13 @@ export async function getBtc(): Promise<BtcData> {
 
 export async function getFearGreed(): Promise<FearGreed> {
   try {
-    const r = await fetch("https://api.alternative.me/fng/", { next: { revalidate: REVALIDATE } });
-    const item = (await r.json()).data[0];
-    return { value: parseInt(item.value, 10), label: item.value_classification };
+    const r = await fetch("https://api.alternative.me/fng/?limit=14", { next: { revalidate: REVALIDATE } });
+    const data = (await r.json()).data as { value: string; value_classification: string }[];
+    const latest = data[0];
+    const history = data.slice(0, 14).reverse().map((d) => parseInt(d.value, 10));
+    return { value: parseInt(latest.value, 10), label: latest.value_classification, history };
   } catch {
-    return { value: null, label: "Unknown" };
+    return { value: null, label: "Unknown", history: [] };
   }
 }
 

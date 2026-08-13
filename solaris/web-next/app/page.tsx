@@ -48,7 +48,7 @@ export default async function DashboardPage() {
     })),
     getBtc().catch(() => ({ price: null, change_24h: null, sparkline: [] })),
     getStocks().catch(() => []),
-    getFearGreed().catch(() => ({ value: null, label: "Unknown" })),
+    getFearGreed().catch(() => ({ value: null, label: "Unknown", history: [] })),
   ]);
 
   return (

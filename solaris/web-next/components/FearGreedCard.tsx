@@ -1,6 +1,6 @@
 "use client";
 
-import { ProgressBar } from "@tremor/react";
+import { AreaChart, ProgressBar } from "@tremor/react";
 import type { FearGreed } from "@/lib/types";
 
 type TremorColor = "red" | "orange" | "yellow" | "lime" | "emerald";
@@ -25,6 +25,7 @@ function fngLabel(v: number | null): { text: string; color: string } {
 
 export default function FearGreedCard({ fearGreed }: { fearGreed: FearGreed }) {
   const label = fngLabel(fearGreed.value);
+  const chartData = fearGreed.history.map((v, i) => ({ i: String(i), value: v }));
 
   return (
     <div className="bg-[#0f1a2e] border border-[#1e3a5f] rounded-lg p-4 flex flex-col gap-3">
@@ -46,6 +47,23 @@ export default function FearGreedCard({ fearGreed }: { fearGreed: FearGreed }) {
             <span className="text-[10.5px] text-[#475569]">FEAR</span>
             <span className="text-[10.5px] text-[#475569]">GREED</span>
           </div>
+        </div>
+      )}
+
+      {chartData.length > 0 && (
+        <div>
+          <div className="text-[10.5px] text-[#475569] mb-1">14-DAY TREND</div>
+          <AreaChart
+            data={chartData}
+            index="i"
+            categories={["value"]}
+            colors={[fngColor(fearGreed.value)]}
+            showXAxis={false}
+            showYAxis={false}
+            showLegend={false}
+            showGridLines={false}
+            className="h-14"
+          />
         </div>
       )}
     </div>

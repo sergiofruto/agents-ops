@@ -132,6 +132,7 @@ export interface StockItem {
 export interface FearGreed {
   value: number | null;
   label: string;
+  history: number[];
 }
 
 // ── Jobs ──────────────────────────────────────────────────────────────────────
