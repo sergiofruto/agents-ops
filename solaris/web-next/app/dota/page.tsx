@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getDotaStats, getDotaBets, getDotaAnalytics } from "@/lib/queries";
-import CollapsibleSection from "@/components/CollapsibleSection";
+import { Section } from "@/components/Section";
 import BetsTable from "@/components/dota/BetsTable";
 import BacktestTable from "@/components/dota/BacktestTable";
 import EloTable from "@/components/dota/EloTable";
@@ -60,17 +60,17 @@ export default async function DotaPage() {
         </div>
       )}
 
-      <CollapsibleSection title={`Bet History (${bets.length})`}>
+      <Section title={`Bet History (${bets.length})`}>
         <BetsTable bets={bets} />
-      </CollapsibleSection>
+      </Section>
 
-      <CollapsibleSection title="Backtest History">
+      <Section title="Backtest History">
         <BacktestTable rows={analytics.backtest_history} />
-      </CollapsibleSection>
+      </Section>
 
-      <CollapsibleSection title="Team Elo Rankings">
+      <Section title="Team Elo Rankings">
         <EloTable rankings={analytics.team_rankings} available={analytics.roster_available} />
-      </CollapsibleSection>
+      </Section>
     </div>
   );
 }

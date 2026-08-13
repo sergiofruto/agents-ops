@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getPolymarketStats, getPolymarketBets } from "@/lib/queries";
-import CollapsibleSection from "@/components/CollapsibleSection";
+import { Section } from "@/components/Section";
 import BetsTable from "@/components/polymarket/BetsTable";
 
 export const metadata = {
@@ -52,9 +52,9 @@ export default async function PolymarketPage() {
         </div>
       )}
 
-      <CollapsibleSection title={`All Bets (${bets.length})`}>
+      <Section title={`All Bets (${bets.length})`}>
         <BetsTable bets={bets} />
-      </CollapsibleSection>
+      </Section>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import StatusBadge from "@/components/StatusBadge";
+import { StatusBadge } from "@/components/StatusBadge";
 import type { PolymarketBet } from "@/lib/types";
 
 interface BetsTableProps {

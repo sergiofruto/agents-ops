@@ -31,7 +31,7 @@ export default function AgentCard({ name, href, stats }: AgentCardProps) {
         <span className="text-[11.5px] font-medium text-[#60a5fa] tracking-[0.06em] uppercase">
           {name}
         </span>
-        <StatusBadge mode={mode} />
+        <StatusBadge status={mode} />
       </div>
 
       {!stats.available ? (

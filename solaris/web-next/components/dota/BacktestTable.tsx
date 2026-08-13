@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@tremor/react";
 import type { BacktestRow } from "@/lib/types";
 
 interface BacktestTableProps {
@@ -41,10 +41,7 @@ export default function BacktestTable({ rows }: BacktestTableProps) {
               <td className="px-4 py-2.5 text-zinc-300 text-xs">
                 {row.run_at.slice(0, 16)}
                 {i === 0 && (
-                  <Badge
-                    variant="outline"
-                    className="ml-2 text-[10px] border-violet-500/40 text-violet-300"
-                  >
+                  <Badge color="violet" className="ml-2 text-[10px]">
                     latest
                   </Badge>
                 )}
