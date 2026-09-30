@@ -35,6 +35,7 @@ export function PhotoLab() {
   const [lastSrc, setLastSrc] = useState<string | null>(null);
   const engineRef = useRef<Promise<PoseEngine> | null>(null);
   const blobUrlRef = useRef<string | null>(null);
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
     const engine = engineRef;
@@ -46,15 +47,24 @@ export function PhotoLab() {
   }, []);
 
   function getEngine(): Promise<PoseEngine> {
-    engineRef.current ??= import("@/lib/pose-engine").then((m) => m.createImageEngine());
+    engineRef.current ??= import("@/lib/pose-engine")
+      .then((m) => m.createImageEngine())
+      .catch((err: unknown) => {
+        // Only drop the cached promise when engine creation itself failed —
+        // not when a later step (e.g. loadImage) in some analyze() call rejects.
+        engineRef.current = null;
+        throw err;
+      });
     return engineRef.current;
   }
 
   async function analyze(src: string) {
+    const id = ++requestIdRef.current;
     setLastSrc(src);
     setState({ status: "working" });
     try {
       const [engine, image] = await Promise.all([getEngine(), loadImage(src)]);
+      if (id !== requestIdRef.current) return; // a newer analyze() call superseded this one
       const detection = engine.detectImage(image);
       setState({
         status: "done",
@@ -63,7 +73,7 @@ export function PhotoLab() {
         assessment: assessPhoto(detection.people, detection.width, detection.height),
       });
     } catch (e) {
-      engineRef.current = null;
+      if (id !== requestIdRef.current) return;
       setState({ status: "error", message: e instanceof Error ? e.message : "Something went wrong." });
     }
   }

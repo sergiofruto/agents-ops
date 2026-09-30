@@ -50,8 +50,16 @@ export function AssessmentView({ assessment }: { assessment: Assessment }) {
       );
     case "scored": {
       const { result, readiness } = assessment;
+      if (result.score === null) {
+        return (
+          <Notice>
+            We couldn&apos;t measure enough of your pose to score it. Adjust your position or
+            lighting.
+          </Notice>
+        );
+      }
       return (
-        <section className="space-y-4 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+        <section role="status" className="space-y-4 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
           <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
             <h2 className="text-lg font-semibold">{POSES[assessment.pose].label}</h2>
             <p>
