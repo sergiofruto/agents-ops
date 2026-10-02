@@ -225,6 +225,8 @@ are sent when you ask for coaching."** Links to a short privacy note (same page 
 stating that the coach request contains joint measurements and passes through Vercel, where
 the IP address is used for rate limiting; nothing is stored beyond rate-limit counters.
 
+MediaPipe tasks-vision includes a built-in usage logger (posts task type and timings to odml.pa.googleapis.com) with no opt-out. The app blocks it with a Content-Security-Policy connect-src header that allows only the app origin and the WASM/model hosts (lib/csp.ts).
+
 ## Screens
 
 Single page, dark theme consistent with Solaris.
