@@ -19,16 +19,17 @@ const EXPECTED: Record<PoseId, { min: number; max: number }> = {
   downdog: { min: 41, max: 51 },
 };
 
-const load = (id: PoseId): Fixture | null => {
+const load = (id: PoseId): Fixture => {
   const file = path.join(process.cwd(), "test", "fixtures", `${id}.json`);
-  return existsSync(file) ? (JSON.parse(readFileSync(file, "utf8")) as Fixture) : null;
+  if (!existsSync(file)) throw new Error(`missing fixture test/fixtures/${id}.json`);
+  return JSON.parse(readFileSync(file, "utf8")) as Fixture;
 };
 
 describe.each(Object.keys(EXPECTED) as PoseId[])("golden sample: %s", (id) => {
   const fx = load(id);
 
-  test.skipIf(!fx)("is recognized, ready, and scored within the documented range", () => {
-    const r = assessPhoto(fx!.people, fx!.width, fx!.height);
+  test("is recognized, ready, and scored within the documented range", () => {
+    const r = assessPhoto(fx.people, fx.width, fx.height);
     if (r.kind !== "scored") throw new Error(`expected scored, got ${JSON.stringify(r, null, 2)}`);
     console.info(`[golden] ${id}: score ${r.result.score}, coverage ${r.readiness.coverage}`);
     expect(r.pose).toBe(id);
@@ -36,27 +37,27 @@ describe.each(Object.keys(EXPECTED) as PoseId[])("golden sample: %s", (id) => {
     expect(r.result.score).toBeLessThanOrEqual(EXPECTED[id].max);
   });
 
-  test.skipIf(!fx)("mirrored input gives the same score", () => {
-    const a = assessPhoto(fx!.people, fx!.width, fx!.height);
-    const b = assessPhoto(fx!.people.map(mirror), fx!.width, fx!.height);
+  test("mirrored input gives the same score", () => {
+    const a = assessPhoto(fx.people, fx.width, fx.height);
+    const b = assessPhoto(fx.people.map(mirror), fx.width, fx.height);
     expect(b.kind).toBe(a.kind);
     if (a.kind === "scored" && b.kind === "scored") expect(b.result.score).toBe(a.result.score);
   });
 
-  test.skipIf(!fx)("a second person is rejected", () => {
-    const p = fx!.people[0];
-    expect(assessPhoto([p, p], fx!.width, fx!.height).kind).toBe("multiple_people");
+  test("a second person is rejected", () => {
+    const p = fx.people[0];
+    expect(assessPhoto([p, p], fx.width, fx.height).kind).toBe("multiple_people");
   });
 
-  test.skipIf(!fx)("hidden knees and ankles never produce a score", () => {
-    const hidden = occlude(fx!.people[0], [
+  test("hidden knees and ankles never produce a score", () => {
+    const hidden = occlude(fx.people[0], [
       "leftKnee", "rightKnee", "leftAnkle", "rightAnkle",
     ]);
-    expect(assessPhoto([hidden], fx!.width, fx!.height).kind).not.toBe("scored");
+    expect(assessPhoto([hidden], fx.width, fx.height).kind).not.toBe("scored");
   });
 
-  test.skipIf(!fx)("a tiny figure in frame never produces a score", () => {
-    const small = scaleAbout(fx!.people[0], 0.3);
-    expect(assessPhoto([small], fx!.width, fx!.height).kind).not.toBe("scored");
+  test("a tiny figure in frame never produces a score", () => {
+    const small = scaleAbout(fx.people[0], 0.3);
+    expect(assessPhoto([small], fx.width, fx.height).kind).not.toBe("scored");
   });
 });
