@@ -82,6 +82,7 @@ by the browser and the API route, so the server owns the same targets the client
   2D in pixel space; depth (z) is not used.
 - **Visibility:** a landmark is *usable* when `visibility ≥ 0.5` and it lies inside the image
   with a 2% margin.
+- Feet use MediaPipe heel (29/30) and foot-index (31/32) landmarks in addition to the ankles.
 - `angle(a, b, c)`: unsigned angle at `b`, degrees, range [0, 180].
 - `tiltFromVertical(p, q)` / `tiltFromHorizontal(p, q)`: unsigned angle between segment p→q
   and the image axis, degrees, range [0, 90].
@@ -168,7 +169,7 @@ guarantees they total less than 30% of the weight.
 | Check id          | Measurement                                                                 | Target  | Tol   | Weight |
 | ----------------- | --------------------------------------------------------------------------- | ------- | ----- | ------ |
 | `standingLeg`     | `angle(hip, knee, ankle)` standing leg, °                                   | 180     | 8     | 25     |
-| `footOffKnee`     | binary: `|raisedAnkle.y − standingKnee.y| / shinLength ≥ 0.15`             | pass    | —     | 20     |
+| `footOffKnee`     | binary: vertical clearance between the standing knee and the raised foot's heel–toe span (heel, ankle, foot index) / shinLength ≥ 0.15 — 0 when the foot overlaps the knee | pass    | —     | 20     |
 | `hipsLevel`       | `tiltFromHorizontal(leftHip, rightHip)`, °                                  | 0       | 6     | 20     |
 | `torsoUpright`    | `tiltFromVertical(hipMid, shoulderMid)`, °                                  | 0       | 8     | 15     |
 | `stability`       | live only: std. deviation of hipMid over the window / torsoLength           | 0       | 0.02  | 20     |

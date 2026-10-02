@@ -103,6 +103,18 @@ export const TREE_PX: PxSpec = {
   leftAnkle: [840, 560],
   rightKnee: [860, 620],
   rightAnkle: [860, 760],
+  leftHeel: [845, 550],
+  leftFootIndex: [835, 590],
+  rightHeel: [855, 770],
+  rightFootIndex: [890, 775],
+};
+
+/** Tree with the raised foot pressed on the standing knee: heel–toe span 590..640 straddles the knee (y 620). */
+export const TREE_FOOT_ON_KNEE_PX: PxSpec = {
+  ...TREE_PX,
+  leftAnkle: [845, 600],
+  leftHeel: [850, 590],
+  leftFootIndex: [840, 640],
 };
 
 /** Side view facing image-left; near side = left (visibility 1); far side offset 15 px, visibility 0.6. */

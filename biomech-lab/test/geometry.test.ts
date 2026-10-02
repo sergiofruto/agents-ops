@@ -61,5 +61,7 @@ describe("landmark helpers", () => {
     expect(sideOf("nose")).toBeNull();
     expect(partOf("leftWrist")).toBe("Wrist");
     expect(partOf("nose")).toBeNull();
+    expect(joint("right", "Heel")).toBe("rightHeel");
+    expect(partOf("leftFootIndex")).toBe("FootIndex");
   });
 });

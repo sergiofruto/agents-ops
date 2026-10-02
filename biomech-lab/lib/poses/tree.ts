@@ -38,14 +38,24 @@ export const tree: PoseDef = {
       min: 0.15,
       source: "frame",
       required: (r) => [
+        joint(r.raised, "Heel"),
         joint(r.raised, "Ankle"),
+        joint(r.raised, "FootIndex"),
         joint(r.standing, "Knee"),
         joint(r.standing, "Ankle"),
       ],
+      // Vertical gap between the standing knee and the raised foot's heel–toe span,
+      // in shin lengths. 0 when any part of the foot overlaps the knee.
       measure: (b, r) => {
         const knee = b.point(joint(r.standing, "Knee"));
         const shin = distance(knee, b.point(joint(r.standing, "Ankle")));
-        return Math.abs(b.point(joint(r.raised, "Ankle")).y - knee.y) / shin;
+        const ys = (["Heel", "Ankle", "FootIndex"] as const).map(
+          (p) => b.point(joint(r.raised, p)).y,
+        );
+        const top = Math.min(...ys);
+        const bottom = Math.max(...ys);
+        const clearance = knee.y < top ? top - knee.y : knee.y > bottom ? knee.y - bottom : 0;
+        return clearance / shin;
       },
     },
     {

@@ -10,6 +10,8 @@ const PART_NAMES: Record<Part, string> = {
   Hip: "hips",
   Knee: "knees",
   Ankle: "ankles",
+  Heel: "heels",
+  FootIndex: "feet",
 };
 
 function partList(joints: Joint[]): string {

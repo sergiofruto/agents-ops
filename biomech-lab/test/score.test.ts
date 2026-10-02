@@ -6,6 +6,7 @@ import type { RawLandmark } from "@/lib/landmarks";
 import {
   DOWNDOG_PX,
   H,
+  TREE_FOOT_ON_KNEE_PX,
   TREE_PX,
   W,
   WARRIOR2_105_PX,
@@ -86,7 +87,7 @@ describe("Tree", () => {
   test("photo mode excludes the live-only stability check", () => {
     const r = score("tree", rawFromPixels(TREE_PX), "photo");
     expect(r.checks.map((c) => c.id)).not.toContain("stability");
-    expect(check(r, "footOffKnee").value).toBeCloseTo(0.429, 3);
+    expect(check(r, "footOffKnee").value).toBeCloseTo(0.214, 3);
     expect(r.score).toBe(100);
   });
 
@@ -94,6 +95,14 @@ describe("Tree", () => {
     const r = score("tree", rawFromPixels(TREE_PX), "live");
     expect(check(r, "stability").status).toBe("not_measured");
     expect(r.score).toBe(100);
+  });
+
+  test("foot pressed on the knee fails footOffKnee (heel–toe span overlaps the knee)", () => {
+    const r = score("tree", rawFromPixels(TREE_FOOT_ON_KNEE_PX), "photo");
+    expect(check(r, "footOffKnee").value).toBe(0);
+    expect(check(r, "footOffKnee").status).toBe("fail");
+    expect(r.score).toBe(75);
+    expect(score("tree", mirror(rawFromPixels(TREE_FOOT_ON_KNEE_PX)), "photo").score).toBe(75);
   });
 });
 

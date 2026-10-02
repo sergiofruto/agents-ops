@@ -17,13 +17,18 @@ export const JOINT_INDEX = {
   rightKnee: 26,
   leftAnkle: 27,
   rightAnkle: 28,
+  leftHeel: 29,
+  rightHeel: 30,
+  leftFootIndex: 31,
+  rightFootIndex: 32,
 } as const;
 
 export const LANDMARK_COUNT = 33;
 
 export type Joint = keyof typeof JOINT_INDEX;
 export type Side = "left" | "right";
-export type Part = "Ear" | "Shoulder" | "Elbow" | "Wrist" | "Hip" | "Knee" | "Ankle";
+export type Part =
+  | "Ear" | "Shoulder" | "Elbow" | "Wrist" | "Hip" | "Knee" | "Ankle" | "Heel" | "FootIndex";
 
 export const ALL_JOINTS = Object.keys(JOINT_INDEX) as Joint[];
 
