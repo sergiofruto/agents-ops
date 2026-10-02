@@ -2,7 +2,10 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, test } from "vitest";
 import { assessPhoto } from "@/lib/assess";
+import { toBody } from "@/lib/body";
+import { joint } from "@/lib/landmarks";
 import type { RawLandmark } from "@/lib/landmarks";
+import { POSES } from "@/lib/poses";
 import type { PoseId } from "@/lib/poses";
 import { mirror, occlude, scaleAbout } from "./helpers/synthetic";
 
@@ -59,5 +62,30 @@ describe.each(Object.keys(EXPECTED) as PoseId[])("golden sample: %s", (id) => {
   test("a tiny figure in frame never produces a score", () => {
     const small = scaleAbout(fx.people[0], 0.3);
     expect(assessPhoto([small], fx.width, fx.height).kind).not.toBe("scored");
+  });
+});
+
+describe("golden sample: warrior2 readiness gate", () => {
+  /**
+   * The "hidden knees and ankles" variant above likely fails via unknown_pose
+   * (occlusion drops classifier confidence), not via the coverage gate itself.
+   * This isolates the gate: occlude only the front knee, which drops exactly
+   * frontKneeBend (weight 30) and kneeOverAnkle (weight 20) from the measured
+   * total — coverage 50/100 = 0.5, below MIN_COVERAGE (0.7) — while leaving
+   * everything the classifier and view/framing checks use untouched.
+   */
+  test("hiding only the front knee triggers the low_coverage gate directly", () => {
+    const fx = load("warrior2");
+    const body = toBody(fx.people[0], fx.width, fx.height);
+    const roles = POSES.warrior2.assignRoles(body);
+    const hidden = occlude(fx.people[0], [joint(roles.front, "Knee")]);
+
+    const r = assessPhoto([hidden], fx.width, fx.height);
+    if (r.kind !== "not_ready") {
+      throw new Error(`expected not_ready, got ${JSON.stringify(r, null, 2)}`);
+    }
+    expect(r.kind).toBe("not_ready");
+    expect(r.readiness.reasons).toContain("low_coverage");
+    expect(r.readiness.coverage).toBeCloseTo(0.5, 6);
   });
 });
