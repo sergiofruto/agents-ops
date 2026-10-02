@@ -80,6 +80,8 @@ export function PhotoLab() {
 
   function onFile(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    // Reset so re-selecting the same file still fires a future onChange.
+    e.target.value = "";
     if (!file) return;
     // Keep the object URL alive so "Try again" works; release the previous upload's URL.
     if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);

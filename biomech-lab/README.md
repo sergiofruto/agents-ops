@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Biomech Lab
 
-## Getting Started
+Upload a photo of a yoga pose and get a posture score. MediaPipe's pose
+detector finds your joints and a geometry-based scorer checks them against
+the pose's target angles — all in the browser, nothing uploaded anywhere.
 
-First, run the development server:
+## Privacy
+
+Your photo never leaves your device: detection and scoring both run
+client-side. The only network calls are fetching the MediaPipe WASM runtime
+and model files. MediaPipe's built-in usage-telemetry endpoint is blocked by
+this app's Content-Security-Policy (see `lib/csp.ts`).
+
+## How scoring works
+
+Three poses are supported today: Warrior II, Tree, and Downward Dog. For
+each pose, the detected landmarks are turned into joint angles and
+distances, and each one is checked against a target (e.g. "front knee bent
+to 90° ± 10°"). Before any score is shown, a readiness gate checks that
+enough of the required joints are visible and in frame — if coverage is too
+low, or the pose/view doesn't match, you get specific feedback instead of a
+number. No numeric score is ever shown when the readiness gate fails.
+
+## Dev commands
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
+npm test           # vitest
+npm run typecheck
+npm run lint
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`/dev/extract` is a dev-only page that runs MediaPipe against the sample
+photos in `public/samples` and prints the landmark JSON used to (re)build
+the fixtures in `test/fixtures/`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Status
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Day 1 (this branch):** upload-a-photo path — detect, classify, readiness
+check, single-frame score.
 
-## Learn More
+**Day 2 (planned):** live camera feed, an AI coach, and deployment.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See `docs/design-spec.md` for the full design spec.

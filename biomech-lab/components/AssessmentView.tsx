@@ -101,5 +101,9 @@ export function AssessmentView({ assessment }: { assessment: Assessment }) {
         </section>
       );
     }
+    default: {
+      const _exhaustive: never = assessment;
+      return _exhaustive;
+    }
   }
 }

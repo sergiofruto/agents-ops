@@ -14,19 +14,22 @@ export function Extractor() {
     (async () => {
       const { createImageEngine } = await import("@/lib/pose-engine");
       const engine = await createImageEngine();
-      const out: Row[] = [];
-      for (const s of SAMPLES) {
-        const img = new window.Image();
-        img.src = s.src;
-        await img.decode();
-        const d = engine.detectImage(img);
-        out.push({
-          id: s.id,
-          json: JSON.stringify({ sample: s.id, width: d.width, height: d.height, people: d.people }, null, 2),
-        });
+      try {
+        const out: Row[] = [];
+        for (const s of SAMPLES) {
+          const img = new window.Image();
+          img.src = s.src;
+          await img.decode();
+          const d = engine.detectImage(img);
+          out.push({
+            id: s.id,
+            json: JSON.stringify({ sample: s.id, width: d.width, height: d.height, people: d.people }, null, 2),
+          });
+        }
+        if (!cancelled) setRows(out);
+      } finally {
+        engine.close();
       }
-      engine.close();
-      if (!cancelled) setRows(out);
     })().catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
     return () => {
       cancelled = true;
