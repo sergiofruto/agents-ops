@@ -138,4 +138,27 @@ describe("scoreMeasurements (server-safe)", () => {
   test("no measured checks → null score", () => {
     expect(scoreMeasurements(POSES.warrior2, [], "photo").score).toBeNull();
   });
+
+  test("a non-finite value is treated as not_measured, other checks still score", () => {
+    const r = scoreMeasurements(
+      POSES.warrior2,
+      [
+        { checkId: "frontKneeBend", value: NaN },
+        { checkId: "armsLevel", value: 0 },
+      ],
+      "photo",
+    );
+    expect(check(r, "frontKneeBend").status).toBe("not_measured");
+    expect(check(r, "frontKneeBend").value).toBeNull();
+    expect(r.score).toBe(100);
+  });
+
+  test("only a non-finite measurement → null score", () => {
+    const r = scoreMeasurements(
+      POSES.warrior2,
+      [{ checkId: "frontKneeBend", value: Infinity }],
+      "photo",
+    );
+    expect(r.score).toBeNull();
+  });
 });

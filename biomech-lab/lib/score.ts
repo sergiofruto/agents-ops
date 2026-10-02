@@ -51,7 +51,9 @@ export function scoreMeasurements(
   measurements: Measurement[],
   mode: Mode,
 ): ScoreResult {
-  const byId = new Map(measurements.map((m) => [m.checkId, m.value]));
+  const byId = new Map(
+    measurements.map((m) => [m.checkId, Number.isFinite(m.value) ? m.value : null]),
+  );
   let weightSum = 0;
   let creditSum = 0;
   const checks = applicableChecks(pose, mode).map((c): CheckResult => {
