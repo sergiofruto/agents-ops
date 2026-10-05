@@ -5,14 +5,9 @@ import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { assessPhoto, type Assessment } from "@/lib/assess";
 import type { RawLandmark } from "@/lib/landmarks";
 import type { PoseEngine } from "@/lib/pose-engine";
+import { SAMPLES } from "@/lib/samples";
 import { AssessmentView } from "./AssessmentView";
 import { StageCanvas } from "./StageCanvas";
-
-export const SAMPLES = [
-  { id: "warrior2", src: "/samples/warrior2.jpg", label: "Warrior II" },
-  { id: "tree", src: "/samples/tree.jpg", label: "Tree" },
-  { id: "downdog", src: "/samples/downdog.jpg", label: "Downward Dog" },
-] as const;
 
 type State =
   | { status: "idle" }

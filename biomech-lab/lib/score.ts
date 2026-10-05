@@ -40,7 +40,7 @@ export function measureFrame(pose: PoseDef, body: Body, mode: Mode): Measurement
   });
 }
 
-function targetText(c: CheckDef): string {
+export function targetText(c: CheckDef): string {
   const u = c.unit === "deg" ? "°" : "";
   return c.kind === "range" ? `${c.target}${u} ± ${c.tol}${u}` : `≥ ${c.min}${u}`;
 }
