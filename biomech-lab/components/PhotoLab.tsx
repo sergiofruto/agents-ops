@@ -1,13 +1,18 @@
 "use client";
 
 import Image from "next/image";
+import { ImageUp, LoaderCircle, RotateCcw, TriangleAlert } from "lucide-react";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { assessPhoto, type Assessment } from "@/lib/assess";
+import { OPEN_UPLOAD_EVENT } from "@/lib/events";
 import type { RawLandmark } from "@/lib/landmarks";
+import { POSES } from "@/lib/poses";
 import type { PoseEngine } from "@/lib/pose-engine";
+import { viewLabel } from "@/lib/pose-summaries";
 import { SAMPLES } from "@/lib/samples";
 import { AssessmentView } from "./AssessmentView";
 import { StageCanvas } from "./StageCanvas";
+import { buttonSecondary, card, focusRing } from "./ui/styles";
 
 type State =
   | { status: "idle" }
@@ -39,6 +44,12 @@ export function PhotoLab() {
       engine.current?.then((e) => e.close()).catch(() => {});
       if (blob.current) URL.revokeObjectURL(blob.current);
     };
+  }, []);
+
+  useEffect(() => {
+    const openUpload = () => setTab("upload");
+    window.addEventListener(OPEN_UPLOAD_EVENT, openUpload);
+    return () => window.removeEventListener(OPEN_UPLOAD_EVENT, openUpload);
   }, []);
 
   function getEngine(): Promise<PoseEngine> {
@@ -86,53 +97,79 @@ export function PhotoLab() {
   }
 
   const tabClass = (active: boolean) =>
-    `rounded-md px-3 py-1.5 text-sm ${active ? "bg-neutral-100 text-neutral-900" : "bg-neutral-800"}`;
+    `rounded-full px-4 py-2 text-sm font-medium transition-colors ${focusRing} ${
+      active ? "bg-ink text-paper" : "text-ink-muted hover:text-ink"
+    }`;
 
   return (
-    <div className="space-y-6">
-      <div role="group" aria-label="Choose input" className="flex gap-2">
+    <div>
+      <div role="group" aria-label="Choose input" className="inline-flex rounded-full border border-line bg-white p-1">
         <button type="button" aria-pressed={tab === "samples"} className={tabClass(tab === "samples")} onClick={() => setTab("samples")}>
-          Try a sample
+          Samples
         </button>
         <button type="button" aria-pressed={tab === "upload"} className={tabClass(tab === "upload")} onClick={() => setTab("upload")}>
-          Upload photo
+          Upload a photo
         </button>
       </div>
 
-      {tab === "samples" ? (
-        <div className="grid grid-cols-3 gap-3">
-          {SAMPLES.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => void analyze(s.src)}
-              className="space-y-1 rounded-lg border border-neutral-800 p-2 text-sm hover:border-neutral-500 focus-visible:outline focus-visible:outline-2"
-            >
-              <Image src={s.src} alt={`${s.label} sample`} width={200} height={200} className="h-32 w-full rounded object-cover" />
-              <span>{s.label}</span>
-            </button>
-          ))}
-        </div>
-      ) : (
-        <label className="block space-y-2 text-sm">
-          <span>Full body in frame · Warrior II and Tree facing the camera · Downward Dog from the side</span>
-          <input type="file" accept="image/*" onChange={onFile} className="block" />
-        </label>
-      )}
+      <div className="mt-6">
+        {tab === "samples" ? (
+          <div className="grid gap-4 sm:grid-cols-3">
+            {SAMPLES.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => void analyze(s.src)}
+                className={`${card} overflow-hidden text-left transition-colors hover:border-ink ${focusRing}`}
+              >
+                <Image
+                  src={s.src}
+                  alt={`${s.label} sample photo`}
+                  width={640}
+                  height={360}
+                  sizes="(min-width: 640px) 360px, 100vw"
+                  className="aspect-video w-full object-cover"
+                />
+                <span className="flex items-center justify-between gap-2 px-4 py-3">
+                  <span className="font-medium">{s.label}</span>
+                  <span className="text-sm text-ink-subtle">{viewLabel(POSES[s.id].view)}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <label className="flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-line-strong bg-white px-6 py-12 text-center transition-colors hover:border-ink focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent">
+            <ImageUp aria-hidden="true" className="size-8 text-accent" />
+            <span className="font-medium">Choose a full-body photo</span>
+            <span className="max-w-md text-sm text-ink-muted">
+              Warrior II and Tree facing the camera, Downward Dog from the side. Your photo stays on
+              your device.
+            </span>
+            <input type="file" accept="image/*" onChange={onFile} className="sr-only" />
+          </label>
+        )}
+      </div>
 
-      {state.status === "working" && <p role="status">Analyzing…</p>}
+      {state.status === "working" && (
+        <p role="status" className="mt-8 flex items-center gap-2 text-ink-muted">
+          <LoaderCircle aria-hidden="true" className="size-5 animate-spin text-accent" />
+          Analyzing your pose… The first run downloads the pose model.
+        </p>
+      )}
       {state.status === "error" && (
-        <div role="alert" className="space-y-2">
-          <p>{state.message}</p>
+        <div role="alert" className={`mt-8 flex flex-wrap items-center gap-4 ${card} p-5`}>
+          <TriangleAlert aria-hidden="true" className="size-5 text-fail" />
+          <p className="flex-1">{state.message}</p>
           {lastSrc && (
-            <button type="button" className="rounded-md bg-neutral-800 px-3 py-1.5 text-sm" onClick={() => void analyze(lastSrc)}>
+            <button type="button" className={buttonSecondary} onClick={() => void analyze(lastSrc)}>
+              <RotateCcw aria-hidden="true" className="size-4" />
               Try again
             </button>
           )}
         </div>
       )}
       {state.status === "done" && (
-        <div className="space-y-4">
+        <div className="mt-8 grid items-start gap-6 lg:grid-cols-[1.15fr_1fr]">
           <StageCanvas image={state.image} person={state.person} />
           <AssessmentView assessment={state.assessment} />
         </div>

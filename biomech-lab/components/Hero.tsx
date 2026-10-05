@@ -16,7 +16,7 @@ export function Hero() {
   return (
     <section
       id="top"
-      className="mx-auto grid max-w-6xl items-center gap-12 px-6 pb-20 pt-12 md:grid-cols-2 md:pt-20"
+      className="mx-auto grid max-w-6xl scroll-mt-20 items-center gap-12 px-6 pb-20 pt-12 md:grid-cols-2 md:pt-20"
     >
       <div>
         <p className={eyebrow}>Movement · Kinesiology · AI</p>
