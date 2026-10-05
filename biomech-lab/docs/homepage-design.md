@@ -29,6 +29,8 @@ Turn the bare tool page into a one-page product site that explains Biomech Lab t
 
 Fonts load via `next/font/google` (self-hosted at build — no new runtime origins, CSP unchanged).
 
+Skeleton overlay uses #ea580c (brighter than accent) for visibility on photos.
+
 ## Sections
 
 1. **Nav (sticky):** logo (PersonStanding icon + "Biomech Lab"), How it works · Poses · Privacy (hidden < sm), GitHub ↗.

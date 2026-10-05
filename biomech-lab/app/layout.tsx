@@ -18,6 +18,12 @@ export const metadata: Metadata = {
     description,
     images: [{ url: HERO_IMAGE.src, width: HERO_IMAGE.width, height: HERO_IMAGE.height, alt: HERO_IMAGE.alt }],
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Biomech Lab",
+    description,
+    images: [HERO_IMAGE.src],
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

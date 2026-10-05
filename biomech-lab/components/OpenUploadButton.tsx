@@ -11,7 +11,8 @@ export function OpenUploadButton() {
       className={buttonSecondary}
       onClick={() => {
         window.dispatchEvent(new Event(OPEN_UPLOAD_EVENT));
-        document.getElementById("lab")?.scrollIntoView({ behavior: "smooth" });
+        const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+        document.getElementById("lab")?.scrollIntoView({ behavior });
       }}
     >
       <Upload aria-hidden="true" className="size-4" />

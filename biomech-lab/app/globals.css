@@ -17,8 +17,10 @@
   --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
 }
 
-html {
-  scroll-behavior: smooth;
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
 }
 
 body {

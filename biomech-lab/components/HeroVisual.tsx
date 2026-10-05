@@ -11,7 +11,7 @@ export function HeroVisual() {
         height={HERO_IMAGE.height}
         alt={HERO_IMAGE.alt}
         preload
-        sizes="(min-width: 768px) 560px, 100vw"
+        sizes="(min-width: 1152px) 528px, (min-width: 768px) 45vw, 100vw"
         className="h-auto w-full"
       />
     </div>

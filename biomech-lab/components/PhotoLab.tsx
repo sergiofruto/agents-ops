@@ -124,7 +124,7 @@ export function PhotoLab() {
               >
                 <Image
                   src={s.src}
-                  alt={`${s.label} sample photo`}
+                  alt=""
                   width={640}
                   height={360}
                   sizes="(min-width: 640px) 360px, 100vw"
@@ -138,7 +138,7 @@ export function PhotoLab() {
             ))}
           </div>
         ) : (
-          <label className="flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-line-strong bg-white px-6 py-12 text-center transition-colors hover:border-ink focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent">
+          <label className="flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-line-strong bg-white px-6 py-12 text-center transition-colors hover:border-ink has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-accent">
             <ImageUp aria-hidden="true" className="size-8 text-accent" />
             <span className="font-medium">Choose a full-body photo</span>
             <span className="max-w-md text-sm text-ink-muted">

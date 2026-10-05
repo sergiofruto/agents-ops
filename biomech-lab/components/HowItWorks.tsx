@@ -10,7 +10,7 @@ const STEPS = [
   {
     Icon: Ruler,
     title: "Measure",
-    text: "Joint angles, alignment and balance are measured in pixel space, so the photo's shape never skews them.",
+    text: "Joint angles and alignment are measured in pixel space, so the photo's shape never skews them.",
   },
   {
     Icon: ClipboardCheck,

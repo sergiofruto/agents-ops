@@ -6,6 +6,9 @@ import { ALL_JOINTS, type Joint, type RawLandmark } from "@/lib/landmarks";
 
 const MAX_WIDTH = 720;
 
+/** Brighter than the UI accent (#c2410c) so the skeleton reads on dark photos. */
+const SKELETON_COLOR = "#ea580c";
+
 const BONES: [Joint, Joint][] = [
   ["leftShoulder", "rightShoulder"],
   ["leftShoulder", "leftElbow"],
@@ -43,7 +46,7 @@ export function StageCanvas({
 
     const body = toBody(person, canvas.width, canvas.height);
     ctx.lineWidth = 4;
-    ctx.strokeStyle = "#ea580c";
+    ctx.strokeStyle = SKELETON_COLOR;
     for (const [a, b] of BONES) {
       if (!body.usable(a) || !body.usable(b)) continue;
       const p = body.point(a);
@@ -54,7 +57,7 @@ export function StageCanvas({
       ctx.stroke();
     }
     ctx.fillStyle = "#ffffff";
-    ctx.strokeStyle = "#ea580c";
+    ctx.strokeStyle = SKELETON_COLOR;
     ctx.lineWidth = 2;
     for (const j of ALL_JOINTS) {
       if (!body.usable(j)) continue;
