@@ -1,20 +1,38 @@
+import { Hero } from "@/components/Hero";
+import { HowItWorks } from "@/components/HowItWorks";
 import { PhotoLab } from "@/components/PhotoLab";
+import { PoseChecks } from "@/components/PoseChecks";
+import { PrivacyAbout } from "@/components/PrivacyAbout";
+import { SiteFooter } from "@/components/SiteFooter";
+import { SiteNav } from "@/components/SiteNav";
+import { eyebrow } from "@/components/ui/styles";
 
 export default function Home() {
   return (
-    <main className="mx-auto max-w-3xl space-y-8 px-4 py-10">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-bold">Biomech Lab</h1>
-        <p className="text-neutral-300">
-          Recognizes Warrior II, Tree and Downward Dog, then scores your form from joint angles
-          measured in your browser.
-        </p>
-        <p className="text-sm text-neutral-400">
-          Images and video stay on your device. Only anonymous measurement results are sent when
-          you ask for coaching.
-        </p>
-      </header>
-      <PhotoLab />
-    </main>
+    <>
+      <SiteNav />
+      <main>
+        <Hero />
+        <section id="lab" aria-labelledby="lab-title" className="scroll-mt-20 border-t border-line bg-white/60">
+          <div className="mx-auto max-w-6xl px-6 py-20">
+            <p className={eyebrow}>The lab</p>
+            <h2 id="lab-title" className="mt-3 font-display text-3xl md:text-4xl">
+              Try it
+            </h2>
+            <p className="mt-3 max-w-2xl text-ink-muted">
+              Pick a sample or upload a full-body photo: Warrior II and Tree facing the camera,
+              Downward Dog from the side.
+            </p>
+            <div className="mt-10">
+              <PhotoLab />
+            </div>
+          </div>
+        </section>
+        <HowItWorks />
+        <PoseChecks />
+        <PrivacyAbout />
+      </main>
+      <SiteFooter />
+    </>
   );
 }
