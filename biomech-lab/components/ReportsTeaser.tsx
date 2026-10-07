@@ -1,10 +1,13 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { ITERATIONS } from "@/data/iterations";
+import { countWord } from "@/lib/format";
 import { sampleReports } from "@/lib/sample-reports";
 import { buttonSecondary, container, label, panel, sectionShell, sectionTitle } from "./ui/styles";
 
 export function ReportsTeaser() {
   const reports = sampleReports();
+  const latest = ITERATIONS[ITERATIONS.length - 1];
   return (
     <section aria-labelledby="reports-teaser-title" className={sectionShell}>
       <div className={`${container} py-16`}>
@@ -12,11 +15,11 @@ export function ReportsTeaser() {
           <div>
             <p className={label}>02 · Sample reports</p>
             <h2 id="reports-teaser-title" className={sectionTitle}>
-              Three real photos, fully measured
+              {countWord(reports.length)} real photos, fully measured
             </h2>
             <p className="mt-2 max-w-xl text-fg-muted">
-              Skeleton overlays, angle gauges and score breakdowns from iteration 1 of Sergio&apos;s
-              practice shots.
+              Skeleton overlays, angle gauges and score breakdowns from iteration {latest.id} of
+              Sergio&apos;s practice shots.
             </p>
           </div>
           <dl className="flex gap-6">

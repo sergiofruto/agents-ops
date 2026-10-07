@@ -1,7 +1,7 @@
 import { viewLabel } from "@/lib/pose-summaries";
 import type { SampleReport } from "@/lib/sample-reports";
 import { panel } from "./ui/styles";
-import { CheckRow, formatValue } from "./viz/CheckRow";
+import { CheckRow, formatValue, ScoreBasis } from "./viz/CheckRow";
 import { ScoreHeader } from "./viz/ScoreHeader";
 import { SkeletonOverlay } from "./viz/SkeletonOverlay";
 import { StatusBadge } from "./viz/StatusBadge";
@@ -53,6 +53,7 @@ export function ReportCard({ report }: { report: SampleReport }) {
             <CheckRow key={c.id} check={c} />
           ))}
         </ul>
+        <ScoreBasis checks={report.checks} />
       </div>
     </article>
   );

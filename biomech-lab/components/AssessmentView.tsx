@@ -1,7 +1,7 @@
 import { Info, TriangleAlert } from "lucide-react";
 import type { Assessment } from "@/lib/assess";
 import { POSES } from "@/lib/poses";
-import { CheckRow } from "./viz/CheckRow";
+import { CheckRow, ScoreBasis } from "./viz/CheckRow";
 import { ScoreHeader } from "./viz/ScoreHeader";
 
 function Notice({ children }: { children: React.ReactNode }) {
@@ -61,6 +61,7 @@ export function AssessmentView({ assessment, meta }: { assessment: Assessment; m
               <CheckRow key={c.id} check={c} />
             ))}
           </ul>
+          <ScoreBasis checks={result.checks} />
         </section>
       );
     }

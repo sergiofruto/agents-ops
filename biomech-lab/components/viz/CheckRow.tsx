@@ -12,6 +12,27 @@ export function earnedPoints(c: CheckResult): number {
   return c.credit === null ? 0 : Math.round(c.weight * c.credit * 10) / 10;
 }
 
+/** Sums earned/total points over checks that were actually measured (credit !== null). */
+export function scoreBasis(checks: CheckResult[]): { earned: number; total: number } {
+  let earned = 0;
+  let total = 0;
+  for (const c of checks) {
+    if (c.credit === null) continue;
+    earned += c.weight * c.credit;
+    total += c.weight;
+  }
+  return { earned: Math.round(earned * 10) / 10, total };
+}
+
+export function ScoreBasis({ checks }: { checks: CheckResult[] }) {
+  const { earned, total } = scoreBasis(checks);
+  return (
+    <p className="mt-3 font-mono text-[11px] text-fg-subtle">
+      score = {earned} / {total} measured pts × 100
+    </p>
+  );
+}
+
 export function CheckRow({ check, showCue = true }: { check: CheckResult; showCue?: boolean }) {
   const earned = earnedPoints(check);
   const needsWork = check.status === "partial" || check.status === "fail";
@@ -35,7 +56,13 @@ export function CheckRow({ check, showCue = true }: { check: CheckResult; showCu
         )}
       </div>
       <p className="col-span-2 font-mono text-[11px] text-fg-subtle">
-        {earned} / {check.weight} pts
+        {check.status === "not_measured" ? (
+          <>— / {check.weight} pts · excluded</>
+        ) : (
+          <>
+            {earned} / {check.weight} pts
+          </>
+        )}
       </p>
     </li>
   );

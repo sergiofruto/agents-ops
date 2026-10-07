@@ -30,41 +30,48 @@ export function IterationChart({ points }: { points: IterationPoint[] }) {
 
   return (
     <figure>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={`Score by iteration. ${description}`}>
-        {[0, 25, 50, 75, 100].map((v) => (
-          <g key={v}>
-            <line x1={PAD.l} x2={W - PAD.r} y1={ys(v)} y2={ys(v)} className="stroke-line" />
-            <text x={PAD.l - 8} y={ys(v) + 4} textAnchor="end" className="fill-fg-subtle font-mono text-[10px]">
-              {v}
+      <div className="overflow-x-auto">
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          className="w-full min-w-[480px] max-w-xl"
+          role="img"
+          aria-label={`Score by iteration. ${description}`}
+        >
+          {[0, 25, 50, 75, 100].map((v) => (
+            <g key={v}>
+              <line x1={PAD.l} x2={W - PAD.r} y1={ys(v)} y2={ys(v)} className="stroke-line" />
+              <text x={PAD.l - 8} y={ys(v) + 4} textAnchor="end" className="fill-fg-subtle font-mono text-[10px]">
+                {v}
+              </text>
+            </g>
+          ))}
+          {points.map((p, i) => (
+            <text key={p.iteration} x={xs(i)} y={H - 8} textAnchor="middle" className="fill-fg-subtle font-mono text-[10px]">
+              it.{p.iteration} · {p.date}
             </text>
-          </g>
-        ))}
-        {points.map((p, i) => (
-          <text key={p.iteration} x={xs(i)} y={H - 8} textAnchor="middle" className="fill-fg-subtle font-mono text-[10px]">
-            it.{p.iteration} · {p.date}
-          </text>
-        ))}
-        {POSE_ORDER.map((id) => (
-          <g key={id} className={SERIES[id]}>
-            {points.length > 1 && (
-              <polyline
-                points={points.map((p, i) => `${xs(i)},${ys(p.scores[id])}`).join(" ")}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-              />
-            )}
-            {points.map((p, i) => (
-              <circle key={p.iteration} cx={xs(i)} cy={ys(p.scores[id])} r={4} fill="currentColor" />
-            ))}
-          </g>
-        ))}
-        {labels.map(({ id, y }) => (
-          <text key={id} x={xs(points.length - 1) + 12} y={y + 4} className={`${SERIES[id]} font-mono text-[11px]`} fill="currentColor">
-            {POSES[id].label} {last.scores[id]}
-          </text>
-        ))}
-      </svg>
+          ))}
+          {POSE_ORDER.map((id) => (
+            <g key={id} className={SERIES[id]}>
+              {points.length > 1 && (
+                <polyline
+                  points={points.map((p, i) => `${xs(i)},${ys(p.scores[id])}`).join(" ")}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                />
+              )}
+              {points.map((p, i) => (
+                <circle key={p.iteration} cx={xs(i)} cy={ys(p.scores[id])} r={4} fill="currentColor" />
+              ))}
+            </g>
+          ))}
+          {labels.map(({ id, y }) => (
+            <text key={id} x={xs(points.length - 1) + 12} y={y + 4} className={`${SERIES[id]} font-mono text-[11px]`} fill="currentColor">
+              {POSES[id].label} {last.scores[id]}
+            </text>
+          ))}
+        </svg>
+      </div>
       {points.length === 1 && (
         <figcaption className="mt-2 font-mono text-xs text-fg-subtle">1 iteration so far · next shoot pending</figcaption>
       )}

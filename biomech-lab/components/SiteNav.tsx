@@ -15,7 +15,7 @@ export function SiteNav() {
         </Link>
         <ul className="flex items-center gap-5 font-mono text-xs text-fg-muted">
           {NAV_LINKS.map((l) => (
-            <li key={l.href} className={l.href === "/reports" ? "" : "hidden md:block"}>
+            <li key={l.href} className={l.href === "/reports" ? "" : "hidden sm:block"}>
               <Link href={l.href} className={`rounded hover:text-fg-strong ${focusRing}`}>
                 {l.label}
               </Link>

@@ -26,6 +26,12 @@ type State =
       detectMs: number;
     };
 
+function timed<T>(fn: () => T): [T, number] {
+  const t0 = performance.now();
+  const result = fn();
+  return [result, Math.round(performance.now() - t0)];
+}
+
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new window.Image();
@@ -77,11 +83,7 @@ export function PhotoLab() {
     try {
       const [engine, image] = await Promise.all([getEngine(), loadImage(src)]);
       if (id !== requestIdRef.current) return; // a newer analyze() call superseded this one
-      // eslint-disable-next-line react-hooks/purity -- analyze() only runs from event handlers, never during render
-      const t0 = performance.now();
-      const detection = engine.detectImage(image);
-      // eslint-disable-next-line react-hooks/purity -- analyze() only runs from event handlers, never during render
-      const detectMs = Math.round(performance.now() - t0);
+      const [detection, detectMs] = timed(() => engine.detectImage(image));
       setState({
         status: "done",
         image,

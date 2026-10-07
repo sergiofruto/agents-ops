@@ -6,6 +6,7 @@ import { SiteNav } from "@/components/SiteNav";
 import { container, focusRing, label, panel } from "@/components/ui/styles";
 import { IterationChart } from "@/components/viz/IterationChart";
 import { ITERATIONS } from "@/data/iterations";
+import { countWord } from "@/lib/format";
 import { iterationSeries, sampleReports } from "@/lib/sample-reports";
 
 export const metadata: Metadata = {
@@ -24,7 +25,7 @@ export default function ReportsPage() {
       <main className={`${container} py-14`}>
         <p className={label}>Sample reports · iteration {latest.id}</p>
         <h1 className="mt-3 text-4xl font-bold tracking-tight text-fg-strong md:text-5xl">
-          Three real photos, fully measured
+          {countWord(reports.length)} real photos, fully measured
         </h1>
         <p className="mt-4 max-w-2xl text-fg-muted">
           {latest.date} · {latest.device}. {latest.note} Scores come from the same code that runs in
