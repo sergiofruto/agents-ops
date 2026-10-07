@@ -12,13 +12,19 @@ import { viewLabel } from "@/lib/pose-summaries";
 import { SAMPLES } from "@/lib/samples";
 import { AssessmentView } from "./AssessmentView";
 import { StageCanvas } from "./StageCanvas";
-import { buttonSecondary, card, focusRing } from "./ui/styles";
+import { buttonSecondary, focusRing, panel } from "./ui/styles";
 
 type State =
   | { status: "idle" }
   | { status: "working" }
   | { status: "error"; message: string }
-  | { status: "done"; image: HTMLImageElement; person: RawLandmark[] | null; assessment: Assessment };
+  | {
+      status: "done";
+      image: HTMLImageElement;
+      person: RawLandmark[] | null;
+      assessment: Assessment;
+      detectMs: number;
+    };
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -71,12 +77,17 @@ export function PhotoLab() {
     try {
       const [engine, image] = await Promise.all([getEngine(), loadImage(src)]);
       if (id !== requestIdRef.current) return; // a newer analyze() call superseded this one
+      // eslint-disable-next-line react-hooks/purity -- analyze() only runs from event handlers, never during render
+      const t0 = performance.now();
       const detection = engine.detectImage(image);
+      // eslint-disable-next-line react-hooks/purity -- analyze() only runs from event handlers, never during render
+      const detectMs = Math.round(performance.now() - t0);
       setState({
         status: "done",
         image,
         person: detection.people[0] ?? null,
         assessment: assessPhoto(detection.people, detection.width, detection.height),
+        detectMs,
       });
     } catch (e) {
       if (id !== requestIdRef.current) return;
@@ -97,18 +108,18 @@ export function PhotoLab() {
   }
 
   const tabClass = (active: boolean) =>
-    `rounded-full px-4 py-2 text-sm font-medium transition-colors ${focusRing} ${
-      active ? "bg-ink text-paper" : "text-ink-muted hover:text-ink"
+    `rounded px-3 py-1.5 font-mono text-xs transition-colors ${focusRing} ${
+      active ? "bg-accent text-accent-ink" : "text-fg-muted hover:text-fg-strong"
     }`;
 
   return (
     <div>
-      <div role="group" aria-label="Choose input" className="inline-flex rounded-full border border-line bg-white p-1">
+      <div role="group" aria-label="Choose input" className="inline-flex rounded-md border border-line bg-surface p-1">
         <button type="button" aria-pressed={tab === "samples"} className={tabClass(tab === "samples")} onClick={() => setTab("samples")}>
-          Samples
+          samples
         </button>
         <button type="button" aria-pressed={tab === "upload"} className={tabClass(tab === "upload")} onClick={() => setTab("upload")}>
-          Upload a photo
+          upload photo
         </button>
       </div>
 
@@ -120,7 +131,7 @@ export function PhotoLab() {
                 key={s.id}
                 type="button"
                 onClick={() => void analyze(s.src)}
-                className={`${card} overflow-hidden text-left transition-colors hover:border-ink ${focusRing}`}
+                className={`${panel} overflow-hidden text-left transition-colors hover:border-accent ${focusRing}`}
               >
                 <Image
                   src={s.src}
@@ -128,22 +139,22 @@ export function PhotoLab() {
                   width={640}
                   height={360}
                   sizes="(min-width: 640px) 360px, 100vw"
-                  className="aspect-video w-full object-cover"
+                  className="aspect-video w-full object-cover brightness-[0.8]"
                 />
                 <span className="flex items-center justify-between gap-2 px-4 py-3">
-                  <span className="font-medium">{s.label}</span>
-                  <span className="text-sm text-ink-subtle">{viewLabel(POSES[s.id].view)}</span>
+                  <span className="text-sm font-medium text-fg-strong">{s.label}</span>
+                  <span className="font-mono text-[11px] text-fg-subtle">{viewLabel(POSES[s.id].view).toLowerCase()}</span>
                 </span>
               </button>
             ))}
           </div>
         ) : (
-          <label className="flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-line-strong bg-white px-6 py-12 text-center transition-colors hover:border-ink has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-accent">
+          <label className="flex cursor-pointer flex-col items-center gap-3 rounded-lg border-2 border-dashed border-line-strong bg-surface px-6 py-12 text-center transition-colors hover:border-accent has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-accent">
             <ImageUp aria-hidden="true" className="size-8 text-accent" />
-            <span className="font-medium">Choose a full-body photo</span>
-            <span className="max-w-md text-sm text-ink-muted">
-              Warrior II and Tree facing the camera, Downward Dog from the side. Your photo stays on
-              your device.
+            <span className="font-medium text-fg-strong">Choose a full-body photo</span>
+            <span className="max-w-md text-sm text-fg-muted">
+              Warrior II and Tree facing the camera, Downward Dog from the side. Processed locally;
+              nothing is uploaded.
             </span>
             <input type="file" accept="image/*" onChange={onFile} className="sr-only" />
           </label>
@@ -151,15 +162,15 @@ export function PhotoLab() {
       </div>
 
       {state.status === "working" && (
-        <p role="status" className="mt-8 flex items-center gap-2 text-ink-muted">
-          <LoaderCircle aria-hidden="true" className="size-5 animate-spin text-accent" />
-          Analyzing your pose… The first run downloads the pose model.
+        <p role="status" className="mt-8 flex items-center gap-2 font-mono text-sm text-fg-muted">
+          <LoaderCircle aria-hidden="true" className="size-4 animate-spin text-accent" />
+          analyzing… the first run downloads the pose model
         </p>
       )}
       {state.status === "error" && (
-        <div role="alert" className={`mt-8 flex flex-wrap items-center gap-4 ${card} p-5`}>
+        <div role="alert" className={`mt-8 flex flex-wrap items-center gap-4 ${panel} border-fail/40 p-5`}>
           <TriangleAlert aria-hidden="true" className="size-5 text-fail" />
-          <p className="flex-1">{state.message}</p>
+          <p className="flex-1 text-fg-strong">{state.message}</p>
           {lastSrc && (
             <button type="button" className={buttonSecondary} onClick={() => void analyze(lastSrc)}>
               <RotateCcw aria-hidden="true" className="size-4" />
@@ -171,7 +182,7 @@ export function PhotoLab() {
       {state.status === "done" && (
         <div className="mt-8 grid items-start gap-6 lg:grid-cols-[1.15fr_1fr]">
           <StageCanvas image={state.image} person={state.person} />
-          <AssessmentView assessment={state.assessment} />
+          <AssessmentView assessment={state.assessment} meta={`detect ${state.detectMs} ms`} />
         </div>
       )}
     </div>

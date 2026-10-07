@@ -14,6 +14,3 @@ export const sectionTitle = "mt-2 text-2xl font-bold tracking-tight text-fg-stro
 export const sectionShell = "scroll-mt-20 border-t border-line";
 
 export const container = "mx-auto max-w-6xl px-6";
-
-/** @deprecated Temporary alias for Task 4; removed there. */
-export const card = panel;
