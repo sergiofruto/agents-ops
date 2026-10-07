@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { SAMPLES } from "@/components/PhotoLab";
+import { SAMPLES } from "@/lib/samples";
 
 type Row = { id: string; json: string };
 

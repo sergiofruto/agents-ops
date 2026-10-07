@@ -4,7 +4,10 @@ import { useEffect, useRef } from "react";
 import { toBody } from "@/lib/body";
 import { ALL_JOINTS, type Joint, type RawLandmark } from "@/lib/landmarks";
 
-const MAX_WIDTH = 640;
+const MAX_WIDTH = 720;
+
+/** Brighter than the UI accent (#c2410c) so the skeleton reads on dark photos. */
+const SKELETON_COLOR = "#ea580c";
 
 const BONES: [Joint, Joint][] = [
   ["leftShoulder", "rightShoulder"],
@@ -42,8 +45,8 @@ export function StageCanvas({
     if (!person) return;
 
     const body = toBody(person, canvas.width, canvas.height);
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = "#22d3ee";
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = SKELETON_COLOR;
     for (const [a, b] of BONES) {
       if (!body.usable(a) || !body.usable(b)) continue;
       const p = body.point(a);
@@ -53,13 +56,16 @@ export function StageCanvas({
       ctx.lineTo(q.x, q.y);
       ctx.stroke();
     }
-    ctx.fillStyle = "#f8fafc";
+    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = SKELETON_COLOR;
+    ctx.lineWidth = 2;
     for (const j of ALL_JOINTS) {
       if (!body.usable(j)) continue;
       const p = body.point(j);
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
       ctx.fill();
+      ctx.stroke();
     }
   }, [image, person]);
 
@@ -68,7 +74,7 @@ export function StageCanvas({
       ref={ref}
       role="img"
       aria-label="Your photo with the detected skeleton"
-      className="w-full max-w-[640px] rounded-lg"
+      className="w-full rounded-2xl border border-line bg-white"
     />
   );
 }
