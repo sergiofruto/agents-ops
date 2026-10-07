@@ -1,13 +1,22 @@
 export const focusRing =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
-export const buttonPrimary = `inline-flex items-center gap-2 rounded-full bg-ink px-5 py-3 text-sm font-semibold text-paper transition-colors hover:bg-ink/85 ${focusRing}`;
+export const buttonPrimary = `inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink transition-colors hover:bg-accent/85 ${focusRing}`;
 
-export const buttonSecondary = `inline-flex items-center gap-2 rounded-full border border-line-strong bg-white px-5 py-3 text-sm font-semibold text-ink transition-colors hover:border-ink ${focusRing}`;
+export const buttonSecondary = `inline-flex items-center gap-2 rounded-md border border-line-strong bg-surface px-4 py-2.5 text-sm font-medium text-fg-strong transition-colors hover:border-accent ${focusRing}`;
 
-export const card = "rounded-2xl border border-line bg-white";
+export const panel = "rounded-lg border border-line bg-surface";
 
-export const eyebrow = "text-xs font-semibold uppercase tracking-[0.18em] text-accent";
+export const label = "font-mono text-xs uppercase tracking-[0.14em] text-accent";
 
+export const sectionTitle = "mt-2 text-2xl font-bold tracking-tight text-fg-strong md:text-3xl";
+
+export const sectionShell = "scroll-mt-20 border-t border-line";
+
+export const container = "mx-auto max-w-6xl px-6";
+
+/** @deprecated Temporary aliases for components rebuilt in Tasks 3–4; removed there. */
+export const card = panel;
+export const eyebrow = label;
 export const iconTile =
-  "inline-flex size-10 items-center justify-center rounded-xl bg-accent-soft text-accent";
+  "inline-flex size-10 items-center justify-center rounded-md border border-line-strong bg-bg text-accent";
