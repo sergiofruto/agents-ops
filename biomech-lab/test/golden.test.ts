@@ -23,8 +23,8 @@ const EXPECTED: Record<PoseId, { min: number; max: number }> = {
 };
 
 const load = (id: PoseId): Fixture => {
-  const file = path.join(process.cwd(), "test", "fixtures", `${id}.json`);
-  if (!existsSync(file)) throw new Error(`missing fixture test/fixtures/${id}.json`);
+  const file = path.join(process.cwd(), "data", "samples", `${id}.json`);
+  if (!existsSync(file)) throw new Error(`missing fixture data/samples/${id}.json`);
   return JSON.parse(readFileSync(file, "utf8")) as Fixture;
 };
 
