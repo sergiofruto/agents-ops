@@ -15,8 +15,5 @@ export const sectionShell = "scroll-mt-20 border-t border-line";
 
 export const container = "mx-auto max-w-6xl px-6";
 
-/** @deprecated Temporary aliases for components rebuilt in Tasks 3–4; removed there. */
+/** @deprecated Temporary alias for Task 4; removed there. */
 export const card = panel;
-export const eyebrow = label;
-export const iconTile =
-  "inline-flex size-10 items-center justify-center rounded-md border border-line-strong bg-bg text-accent";

@@ -1,11 +1,12 @@
+import { CheckSpec } from "@/components/CheckSpec";
 import { Hero } from "@/components/Hero";
-import { HowItWorks } from "@/components/HowItWorks";
 import { PhotoLab } from "@/components/PhotoLab";
-import { PoseChecks } from "@/components/PoseChecks";
+import { Pipeline } from "@/components/Pipeline";
 import { PrivacyAbout } from "@/components/PrivacyAbout";
+import { ReportsTeaser } from "@/components/ReportsTeaser";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteNav } from "@/components/SiteNav";
-import { eyebrow } from "@/components/ui/styles";
+import { container, label, sectionShell, sectionTitle } from "@/components/ui/styles";
 
 export default function Home() {
   return (
@@ -13,23 +14,23 @@ export default function Home() {
       <SiteNav />
       <main>
         <Hero />
-        <section id="lab" aria-labelledby="lab-title" className="scroll-mt-20 border-t border-line bg-white/60">
-          <div className="mx-auto max-w-6xl px-6 py-20">
-            <p className={eyebrow}>The lab</p>
-            <h2 id="lab-title" className="mt-3 font-display text-3xl md:text-4xl">
-              Try it
+        <section id="analyze" aria-labelledby="analyze-title" className={sectionShell}>
+          <div className={`${container} py-20`}>
+            <p className={label}>01 · Analyze</p>
+            <h2 id="analyze-title" className={sectionTitle}>
+              Run it on a sample or your photo
             </h2>
-            <p className="mt-3 max-w-2xl text-ink-muted">
-              Pick a sample or upload a full-body photo: Warrior II and Tree facing the camera,
-              Downward Dog from the side.
+            <p className="mt-3 max-w-2xl text-fg-muted">
+              Warrior II and Tree facing the camera, Downward Dog from the side. Full body in frame.
             </p>
             <div className="mt-10">
               <PhotoLab />
             </div>
           </div>
         </section>
-        <HowItWorks />
-        <PoseChecks />
+        <ReportsTeaser />
+        <Pipeline />
+        <CheckSpec />
         <PrivacyAbout />
       </main>
       <SiteFooter />

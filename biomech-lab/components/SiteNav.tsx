@@ -1,27 +1,24 @@
-import { ArrowUpRight, PersonStanding } from "lucide-react";
-import { LINKS } from "@/lib/site";
-import { focusRing } from "./ui/styles";
-
-const NAV = [
-  { href: "#how", label: "How it works" },
-  { href: "#poses", label: "Poses" },
-  { href: "#privacy", label: "Privacy" },
-];
+import { ArrowUpRight } from "lucide-react";
+import Link from "next/link";
+import { APP_VERSION, LINKS, NAV_LINKS } from "@/lib/site";
+import { container, focusRing } from "./ui/styles";
 
 export function SiteNav() {
   return (
-    <header className="sticky top-0 z-10 border-b border-line bg-paper/90 backdrop-blur">
-      <nav aria-label="Main" className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <a href="#top" className={`flex items-center gap-2 rounded-md font-display text-lg ${focusRing}`}>
-          <PersonStanding aria-hidden="true" className="size-5 text-accent" />
-          Biomech Lab
-        </a>
-        <ul className="flex items-center gap-6 text-sm text-ink-muted">
-          {NAV.map((l) => (
-            <li key={l.href} className="hidden sm:block">
-              <a href={l.href} className={`rounded-md hover:text-ink ${focusRing}`}>
+    <header className="sticky top-0 z-10 border-b border-line bg-bg/85 backdrop-blur">
+      <nav aria-label="Main" className={`${container} flex items-center justify-between py-3`}>
+        <Link href="/" className={`flex items-center gap-2 rounded font-mono text-sm text-fg-strong ${focusRing}`}>
+          <span aria-hidden="true" className="text-accent">
+            ◉
+          </span>
+          biomech_lab <span className="text-fg-subtle">{APP_VERSION}</span>
+        </Link>
+        <ul className="flex items-center gap-5 font-mono text-xs text-fg-muted">
+          {NAV_LINKS.map((l) => (
+            <li key={l.href} className={l.href === "/reports" ? "" : "hidden md:block"}>
+              <Link href={l.href} className={`rounded hover:text-fg-strong ${focusRing}`}>
                 {l.label}
-              </a>
+              </Link>
             </li>
           ))}
           <li>
@@ -29,10 +26,10 @@ export function SiteNav() {
               href={LINKS.github}
               target="_blank"
               rel="noreferrer"
-              className={`inline-flex items-center gap-1 rounded-md font-medium text-ink hover:text-accent ${focusRing}`}
+              className={`inline-flex items-center gap-1 rounded text-fg-strong hover:text-accent ${focusRing}`}
             >
-              GitHub
-              <ArrowUpRight aria-hidden="true" className="size-4" />
+              github
+              <ArrowUpRight aria-hidden="true" className="size-3.5" />
             </a>
           </li>
         </ul>
