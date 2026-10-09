@@ -12,7 +12,7 @@ import { iterationSeries, sampleReports } from "@/lib/sample-reports";
 export const metadata: Metadata = {
   title: "Sample reports · Biomech Lab",
   description:
-    "Full pose analyses of three real photos: skeleton overlays, joint-angle gauges and score breakdowns, computed in the browser pipeline.",
+    "Full pose analyses of real practice photos: skeleton overlays, joint-angle gauges and score breakdowns, computed in the browser pipeline.",
 };
 
 export default function ReportsPage() {
