@@ -12,7 +12,7 @@ export function OpenUploadButton() {
       onClick={() => {
         window.dispatchEvent(new Event(OPEN_UPLOAD_EVENT));
         const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
-        document.getElementById("lab")?.scrollIntoView({ behavior });
+        document.getElementById("analyze")?.scrollIntoView({ behavior });
       }}
     >
       <Upload aria-hidden="true" className="size-4" />

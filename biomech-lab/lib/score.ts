@@ -14,6 +14,8 @@ export type CheckResult = {
   credit: number | null;
   status: CheckStatus;
   targetText: string;
+  /** Numeric target/tolerance for range checks (null for min checks); used to draw gauges. */
+  range: { target: number; tol: number } | null;
 };
 
 export type ScoreResult = { score: number | null; checks: CheckResult[] };
@@ -75,6 +77,7 @@ export function scoreMeasurements(
       credit,
       status,
       targetText: targetText(c),
+      range: c.kind === "range" ? { target: c.target, tol: c.tol } : null,
     };
   });
   return {

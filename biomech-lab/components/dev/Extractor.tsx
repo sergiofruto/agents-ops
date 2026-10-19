@@ -42,7 +42,7 @@ export function Extractor() {
     <div className="space-y-6">
       {rows.map((r) => (
         <section key={r.id} className="space-y-2">
-          <h2 className="font-semibold">test/fixtures/{r.id}.json</h2>
+          <h2 className="font-semibold">data/samples/{r.id}.json</h2>
           <button type="button" className="rounded bg-neutral-800 px-3 py-1 text-sm" onClick={() => void navigator.clipboard.writeText(r.json)}>
             Copy
           </button>

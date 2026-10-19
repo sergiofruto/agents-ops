@@ -1,52 +1,49 @@
-import { Activity, ArrowDown, Lock, UserRound } from "lucide-react";
-import { poseSummaries } from "@/lib/pose-summaries";
+import { ArrowDown } from "lucide-react";
+import { checkSpecRows } from "@/lib/check-spec";
+import { LANDMARK_COUNT } from "@/lib/landmarks";
+import { POSE_ORDER } from "@/lib/poses";
 import { HeroVisual } from "./HeroVisual";
 import { OpenUploadButton } from "./OpenUploadButton";
-import { buttonPrimary, eyebrow } from "./ui/styles";
+import { buttonPrimary, container, label } from "./ui/styles";
 
 export function Hero() {
-  const poses = poseSummaries();
-  const checkCount = poses.reduce((n, p) => n + p.checks.length, 0);
-  const chips = [
-    { Icon: Lock, text: "Your photo stays on your device" },
-    { Icon: UserRound, text: "No sign-up" },
-    { Icon: Activity, text: `${poses.length} poses · ${checkCount} checks` },
+  const stats = [
+    { value: LANDMARK_COUNT, name: "landmarks" },
+    { value: checkSpecRows().length, name: "checks" },
+    { value: POSE_ORDER.length, name: "poses" },
+    { value: 0, name: "bytes uploaded" },
   ];
-
   return (
     <section
       id="top"
-      className="mx-auto grid max-w-6xl scroll-mt-20 items-center gap-12 px-6 pb-20 pt-12 md:grid-cols-2 md:pt-20"
+      className={`${container} grid scroll-mt-20 items-center gap-12 pb-20 pt-14 md:grid-cols-[1fr_1.15fr] md:pt-20`}
     >
       <div>
-        <p className={eyebrow}>Movement · Kinesiology · AI</p>
-        <h1 className="mt-4 font-display text-5xl leading-[1.05] tracking-tight md:text-6xl">
-          Move better.
+        <p className={label}>Pose analysis · in-browser · MediaPipe</p>
+        <h1 className="mt-4 text-4xl font-bold leading-[1.05] tracking-tight text-fg-strong md:text-6xl">
+          Biomechanics,
           <br />
-          See why.
+          measured.
         </h1>
-        <p className="mt-6 max-w-md text-lg text-ink-muted">
-          Upload a yoga pose. Biomech Lab detects 33 body landmarks, measures your joint angles and
-          scores your form, all in your browser.
+        <p className="mt-5 max-w-md text-lg text-fg-muted">
+          Body landmarks become joint angles, and joint angles become a score you can audit check by
+          check. Your photo never leaves your device.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
-          <a href="#lab" className={buttonPrimary}>
-            Try a sample
+          <a href="#analyze" className={buttonPrimary}>
+            Run analysis
             <ArrowDown aria-hidden="true" className="size-4" />
           </a>
           <OpenUploadButton />
         </div>
-        <ul className="mt-8 flex flex-wrap gap-2" aria-label="Highlights">
-          {chips.map(({ Icon, text }) => (
-            <li
-              key={text}
-              className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-sm text-ink-muted"
-            >
-              <Icon aria-hidden="true" className="size-4 text-accent" />
-              {text}
-            </li>
+        <dl className="mt-10 grid max-w-md grid-cols-2 gap-4 sm:grid-cols-4">
+          {stats.map((s) => (
+            <div key={s.name}>
+              <dt className="font-mono text-[11px] text-fg-subtle">{s.name}</dt>
+              <dd className="font-mono text-2xl font-semibold text-fg-strong">{s.value}</dd>
+            </div>
           ))}
-        </ul>
+        </dl>
       </div>
       <HeroVisual />
     </section>

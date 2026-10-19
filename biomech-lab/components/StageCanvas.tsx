@@ -1,36 +1,14 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { toBody } from "@/lib/body";
-import { ALL_JOINTS, type Joint, type RawLandmark } from "@/lib/landmarks";
+import type { RawLandmark } from "@/lib/landmarks";
+import { overlayGeometry } from "@/lib/overlay";
 
 const MAX_WIDTH = 720;
+const ACCENT = "#22d3ee";
+const BG = "#0b0f14";
 
-/** Brighter than the UI accent (#c2410c) so the skeleton reads on dark photos. */
-const SKELETON_COLOR = "#ea580c";
-
-const BONES: [Joint, Joint][] = [
-  ["leftShoulder", "rightShoulder"],
-  ["leftShoulder", "leftElbow"],
-  ["leftElbow", "leftWrist"],
-  ["rightShoulder", "rightElbow"],
-  ["rightElbow", "rightWrist"],
-  ["leftShoulder", "leftHip"],
-  ["rightShoulder", "rightHip"],
-  ["leftHip", "rightHip"],
-  ["leftHip", "leftKnee"],
-  ["leftKnee", "leftAnkle"],
-  ["rightHip", "rightKnee"],
-  ["rightKnee", "rightAnkle"],
-];
-
-export function StageCanvas({
-  image,
-  person,
-}: {
-  image: HTMLImageElement;
-  person: RawLandmark[] | null;
-}) {
+export function StageCanvas({ image, person }: { image: HTMLImageElement; person: RawLandmark[] | null }) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -41,29 +19,26 @@ export function StageCanvas({
     const scale = Math.min(1, MAX_WIDTH / image.naturalWidth);
     canvas.width = Math.round(image.naturalWidth * scale);
     canvas.height = Math.round(image.naturalHeight * scale);
+    ctx.filter = "brightness(0.65) saturate(0.5)";
     ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    ctx.filter = "none";
     if (!person) return;
 
-    const body = toBody(person, canvas.width, canvas.height);
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = SKELETON_COLOR;
-    for (const [a, b] of BONES) {
-      if (!body.usable(a) || !body.usable(b)) continue;
-      const p = body.point(a);
-      const q = body.point(b);
+    const g = overlayGeometry(person, canvas.width, canvas.height);
+    ctx.lineCap = "round";
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = ACCENT;
+    for (const b of g.bones) {
       ctx.beginPath();
-      ctx.moveTo(p.x, p.y);
-      ctx.lineTo(q.x, q.y);
+      ctx.moveTo(b.x1, b.y1);
+      ctx.lineTo(b.x2, b.y2);
       ctx.stroke();
     }
-    ctx.fillStyle = "#ffffff";
-    ctx.strokeStyle = SKELETON_COLOR;
+    ctx.fillStyle = BG;
     ctx.lineWidth = 2;
-    for (const j of ALL_JOINTS) {
-      if (!body.usable(j)) continue;
-      const p = body.point(j);
+    for (const j of g.joints) {
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+      ctx.arc(j.x, j.y, 5, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
     }
@@ -74,7 +49,7 @@ export function StageCanvas({
       ref={ref}
       role="img"
       aria-label="Your photo with the detected skeleton"
-      className="w-full rounded-2xl border border-line bg-white"
+      className="w-full rounded-md border border-line bg-bg"
     />
   );
 }

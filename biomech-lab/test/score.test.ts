@@ -162,3 +162,17 @@ describe("scoreMeasurements (server-safe)", () => {
     expect(r.score).toBeNull();
   });
 });
+
+describe("CheckResult.range", () => {
+  test("a range check's result carries { target, tol } matching its CheckDef", () => {
+    const def = POSES.warrior2.checks.find((c) => c.id === "frontKneeBend")!;
+    if (def.kind !== "range") throw new Error("expected frontKneeBend to be a range check");
+    const r = score("warrior2", rawFromPixels(WARRIOR2_PX));
+    expect(check(r, "frontKneeBend").range).toEqual({ target: def.target, tol: def.tol });
+  });
+
+  test("a min check's result has range: null", () => {
+    const r = score("tree", rawFromPixels(TREE_PX));
+    expect(check(r, "footOffKnee").range).toBeNull();
+  });
+});
