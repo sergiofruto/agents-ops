@@ -39,7 +39,7 @@ def check_resolutions() -> None:
 
 
 def _check_single(bet) -> None:
-    detail = fetcher.fetch_market_detail(bet["condition_id"])
+    detail = fetcher.fetch_market_detail(bet["market_id"])
     if not detail:
         return
 
