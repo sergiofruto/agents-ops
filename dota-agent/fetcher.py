@@ -114,20 +114,21 @@ def fetch_clob_spread(token_id: str) -> Optional[float]:
         return None
 
 
-def fetch_market_detail(condition_id: str) -> dict:
+def fetch_market_detail(market_id: str) -> dict:
     """
-    Fetch detailed market data from Gamma API by condition_id.
+    Fetch detailed market data from Gamma API by numeric market id
+    (Gamma returns 422 for condition ids on this route).
     Returns {} on failure.
     """
     try:
         resp = SESSION.get(
-            f"{config.GAMMA_BASE}/markets/{condition_id}",
+            f"{config.GAMMA_BASE}/markets/{market_id}",
             timeout=_TIMEOUT,
         )
         resp.raise_for_status()
         return resp.json()
     except Exception as exc:
-        logger.warning("fetch_market_detail(%s) failed: %s", condition_id, exc)
+        logger.warning("fetch_market_detail(%s) failed: %s", market_id, exc)
         return {}
 
 

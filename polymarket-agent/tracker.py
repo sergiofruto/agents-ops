@@ -74,6 +74,20 @@ def _parse_outcome_prices(detail: dict) -> list[float]:
         return []
 
 
+def _has_confirmed_trade(client, condition_id: str, order_id: str) -> bool:
+    """True if a CONFIRMED trade in this market includes order_id as taker or maker."""
+    from py_clob_client_v2.clob_types import TradeParams
+
+    for trade in client.get_trades(TradeParams(market=condition_id)) or []:
+        if (trade.get("status") or "").upper() != "CONFIRMED":
+            continue
+        if trade.get("taker_order_id") == order_id:
+            return True
+        if any(m.get("order_id") == order_id for m in trade.get("maker_orders") or []):
+            return True
+    return False
+
+
 def check_pending_fills() -> None:
     """
     Re-poll the CLOB for each pending_fill bet to confirm match or void.
@@ -102,7 +116,23 @@ def check_pending_fills() -> None:
             continue
 
         try:
-            order         = client.get_order(order_id)
+            order = client.get_order(order_id)
+
+            if order is None:
+                # CLOB returns null once a matched order is archived — confirm via trade history
+                if _has_confirmed_trade(client, bet["condition_id"], order_id):
+                    database.update_fill_status(bet["id"], "filled")
+                    logger.info(
+                        "Bet #%d fill confirmed from trade history | order=%s",
+                        bet["id"], order_id,
+                    )
+                else:
+                    logger.warning(
+                        "Bet #%d order not found and no confirmed trade yet | order=%s",
+                        bet["id"], order_id,
+                    )
+                continue
+
             size_matched  = float(order.get("size_matched",  0) or 0)
             original_size = float(order.get("original_size", 0) or 0)
             order_status  = (order.get("status") or "").lower()
