@@ -42,3 +42,6 @@ next-env.d.ts
 
 # original photos (unprocessed; may carry metadata) — never commit
 public/user-1-assets/
+
+# brainstorming mockups
+.superpowers/
