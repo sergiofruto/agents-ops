@@ -3,6 +3,8 @@ export type RawLandmark = { x: number; y: number; z?: number; visibility?: numbe
 /** MediaPipe Pose landmark indices for the joints Biomech Lab uses. */
 export const JOINT_INDEX = {
   nose: 0,
+  leftEye: 2,
+  rightEye: 5,
   leftEar: 7,
   rightEar: 8,
   leftShoulder: 11,

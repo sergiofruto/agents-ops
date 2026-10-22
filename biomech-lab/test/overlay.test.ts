@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { LANDMARK_FILES } from "@/data/samples";
-import { overlayGeometry } from "@/lib/overlay";
+import { JOINT_INDEX } from "@/lib/landmarks";
+import { OVERLAY_JOINTS, overlayGeometry } from "@/lib/overlay";
 import { H, W, WARRIOR2_PX, occlude, rawFromPixels } from "./helpers/synthetic";
 
 test("synthetic figure: pixel-space bones between usable joints only", () => {
@@ -25,4 +26,11 @@ test("real Warrior II sample: full skeleton including feet", () => {
   const g = overlayGeometry(f.people[0], f.width, f.height);
   expect(g.bones).toHaveLength(18);
   expect(g.joints).toHaveLength(17);
+});
+
+test("eyes are indexed but never drawn as joints", () => {
+  expect(JOINT_INDEX.leftEye).toBe(2);
+  expect(JOINT_INDEX.rightEye).toBe(5);
+  expect(OVERLAY_JOINTS).not.toContain("leftEye");
+  expect(OVERLAY_JOINTS).not.toContain("rightEye");
 });
