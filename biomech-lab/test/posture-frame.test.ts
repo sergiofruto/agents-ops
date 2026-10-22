@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { toBody } from "@/lib/body";
 import { FINDINGS } from "@/lib/posture/config";
-import { anatomicalRight, earToFloorPx, faceVisibility, facing, makeFrame } from "@/lib/posture/frame";
+import { anatomicalRight, earToFloorPx, facesCamera, facing, makeFrame } from "@/lib/posture/frame";
 import { H, W, mirror, occlude, rawFromPixels, type PxSpec } from "./helpers/synthetic";
 
 const FRONT: PxSpec = {
@@ -67,8 +67,19 @@ describe("posture frame", () => {
     expect(facing(toBody(occlude(raw, ["nose"]), W, H))).toBeNull();
   });
 
-  test("faceVisibility averages nose and eyes", () => {
-    const raw = rawFromPixels({ nose: [800, 120, 0.9], leftEye: [790, 112, 0.6], rightEye: [810, 112, 0.3] });
-    expect(faceVisibility(toBody(raw, W, H))).toBeCloseTo(0.6, 9);
+  test("facesCamera: label order and nose depth agree on front and back", () => {
+    const front = { nose: [800, 120, 1, -0.4], leftEar: [780, 100, 1, 0], rightEar: [820, 100, 1, 0], leftShoulder: [880, 200], rightShoulder: [720, 200] } as PxSpec;
+    const back = { ...front, nose: [800, 120, 1, 0.4], leftShoulder: [720, 200], rightShoulder: [880, 200] } as PxSpec;
+    expect(facesCamera(body(front))).toBe(true);
+    expect(facesCamera(body(back))).toBe(false);
+  });
+
+  test("facesCamera is unsure when the two signals disagree", () => {
+    const mixed = { nose: [800, 120, 1, 0.4], leftEar: [780, 100], rightEar: [820, 100], leftShoulder: [880, 200], rightShoulder: [720, 200] } as PxSpec;
+    expect(facesCamera(body(mixed))).toBeNull();
+  });
+
+  test("facesCamera falls back to label order when depth is flat", () => {
+    expect(facesCamera(body(FRONT))).toBe(true);
   });
 });

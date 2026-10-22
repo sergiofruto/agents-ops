@@ -17,6 +17,8 @@ export type Body = {
   height: number;
   point: (j: Joint) => Point;
   visibility: (j: Joint) => number;
+  /** MediaPipe relative depth; smaller is closer to the camera. */
+  depth: (j: Joint) => number;
   usable: (j: Joint) => boolean;
   shoulderMid: Point;
   hipMid: Point;
@@ -32,6 +34,7 @@ export function toBody(raw: RawLandmark[], width: number, height: number): Body 
   const lm = (j: Joint) => raw[JOINT_INDEX[j]];
   const point = (j: Joint): Point => ({ x: lm(j).x * width, y: lm(j).y * height });
   const visibility = (j: Joint) => lm(j).visibility ?? 0;
+  const depth = (j: Joint) => lm(j).z ?? 0;
   const inFrame = (j: Joint) => {
     const { x, y } = lm(j);
     return x >= EDGE_MARGIN && x <= 1 - EDGE_MARGIN && y >= EDGE_MARGIN && y <= 1 - EDGE_MARGIN;
@@ -54,6 +57,7 @@ export function toBody(raw: RawLandmark[], width: number, height: number): Body 
     height,
     point,
     visibility,
+    depth,
     usable,
     shoulderMid,
     hipMid,

@@ -7,9 +7,7 @@ const W = 1000;
 const HT = 1200;
 
 const FRONT: PxSpec = {
-  nose: [500, 120, 0.95],
-  leftEye: [490, 112, 0.95],
-  rightEye: [510, 112, 0.95],
+  nose: [500, 120, 1, -0.4],
   leftEar: [480, 100],
   rightEar: [520, 100],
   leftShoulder: [580, 200],
@@ -32,30 +30,39 @@ const SIDE: PxSpec = {
   rightHip: [495, 480],
 };
 
-const photo = (spec: PxSpec, faceVis?: number): PhotoInput => {
-  const s: PxSpec = { ...spec };
-  if (faceVis !== undefined) {
-    s.nose = [500, 120, faceVis];
-    s.leftEye = [490, 112, faceVis];
-    s.rightEye = [510, 112, faceVis];
-  }
-  return { people: [rawFromPixels(s, { width: W, height: HT })], width: W, height: HT };
-};
+/** Seen from behind: MediaPipe's left/right labels swap image sides and the nose sits behind the ears. */
+const fromBehind = (spec: PxSpec): PxSpec => ({
+  ...spec,
+  nose: [500, 120, 1, 0.4],
+  leftEar: spec.rightEar,
+  rightEar: spec.leftEar,
+  leftShoulder: spec.rightShoulder,
+  rightShoulder: spec.leftShoulder,
+  leftHip: spec.rightHip,
+  rightHip: spec.leftHip,
+});
+
+const photo = (spec: PxSpec): PhotoInput => ({
+  people: [rawFromPixels(spec, { width: W, height: HT })],
+  width: W,
+  height: HT,
+});
 
 describe("validateStep", () => {
-  test("a front-facing photo passes the front step and is flagged on the back step", () => {
+  test("a front photo passes the front step and is flagged on the back step", () => {
     expect(validateStep("front", photo(FRONT))).toEqual({ ok: true });
     expect(validateStep("back", photo(FRONT))).toEqual({ ok: false, reason: "looks_like_front" });
   });
 
-  test("a hidden face passes the back step and is flagged on the front step", () => {
-    expect(validateStep("back", photo(FRONT, 0.2))).toEqual({ ok: true });
-    expect(validateStep("front", photo(FRONT, 0.2))).toEqual({ ok: false, reason: "looks_like_back" });
+  test("a back photo passes the back step and is flagged on the front step", () => {
+    expect(validateStep("back", photo(fromBehind(FRONT)))).toEqual({ ok: true });
+    expect(validateStep("front", photo(fromBehind(FRONT)))).toEqual({ ok: false, reason: "looks_like_back" });
   });
 
-  test("an in-between face visibility is rejected on both steps", () => {
-    expect(validateStep("front", photo(FRONT, 0.65))).toEqual({ ok: false, reason: "looks_like_back" });
-    expect(validateStep("back", photo(FRONT, 0.65))).toEqual({ ok: false, reason: "looks_like_front" });
+  test("mixed orientation signals are rejected on both steps", () => {
+    const mixed: PxSpec = { ...FRONT, nose: [500, 120, 1, 0.4] };
+    expect(validateStep("front", photo(mixed))).toEqual({ ok: false, reason: "looks_like_back" });
+    expect(validateStep("back", photo(mixed))).toEqual({ ok: false, reason: "looks_like_front" });
   });
 
   test("view must match the step", () => {
@@ -77,7 +84,7 @@ describe("validateStep", () => {
   });
 
   test("the same file on two steps is rejected", () => {
-    expect(validateStep("back", photo(FRONT, 0.2), { fingerprint: "abc", otherFingerprints: ["abc"] })).toEqual({
+    expect(validateStep("back", photo(fromBehind(FRONT)), { fingerprint: "abc", otherFingerprints: ["abc"] })).toEqual({
       ok: false,
       reason: "duplicate",
     });

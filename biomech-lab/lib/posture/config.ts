@@ -50,6 +50,3 @@ export const MAX_SIDE_PX = 1280;
 export const TRAGION_RATIO = 0.936;
 export const HEIGHT_MIN_CM = 120;
 export const HEIGHT_MAX_CM = 220;
-/** Mean nose/eye visibility needed on the front step, and the most allowed on the back step. Provisional. */
-export const FACE_FRONT_MIN = 0.8;
-export const FACE_BACK_MAX = 0.5;

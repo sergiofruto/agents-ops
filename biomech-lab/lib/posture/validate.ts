@@ -1,8 +1,8 @@
 import { toBody } from "@/lib/body";
 import { framingOk, inferView } from "@/lib/view";
-import { FACE_BACK_MAX, FACE_FRONT_MIN, HEIGHT_MAX_CM, HEIGHT_MIN_CM } from "./config";
+import { HEIGHT_MAX_CM, HEIGHT_MIN_CM } from "./config";
 import type { PhotoInput } from "./findings";
-import { earToFloorPx, faceVisibility, type PostureView } from "./frame";
+import { earToFloorPx, facesCamera, type PostureView } from "./frame";
 
 export type StepRejection =
   | "no_person"
@@ -41,10 +41,10 @@ export function validateStep(
   if (view === "side" && seen !== "side") return fail("wrong_view_side");
   if (view !== "side" && seen !== "front") return fail("wrong_view_front");
 
-  // MediaPipe can't tell front from back by shape, so the face decides.
-  const face = faceVisibility(body);
-  if (view === "front" && face < FACE_FRONT_MIN) return fail("looks_like_back");
-  if (view === "back" && face > FACE_BACK_MAX) return fail("looks_like_front");
+  // Front and back have the same shape; orientation decides (null = unsure, retake).
+  const facing = view === "side" ? null : facesCamera(body);
+  if (view === "front" && facing !== true) return fail("looks_like_back");
+  if (view === "back" && facing !== false) return fail("looks_like_front");
 
   if (opts.fingerprint && opts.otherFingerprints?.includes(opts.fingerprint)) return fail("duplicate");
   return { ok: true };

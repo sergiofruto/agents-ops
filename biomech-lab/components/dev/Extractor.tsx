@@ -1,7 +1,29 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { targetSize } from "@/lib/posture/image";
 import { SAMPLES } from "@/lib/samples";
+
+/** Local, gitignored posture photos (public/user-1-assets/posture), detected at production size. */
+const POSTURE_PHOTOS = ["front", "side", "back"].map((view) => ({
+  id: `posture/${view}`,
+  src: `/user-1-assets/posture/posture-01-${view}.jpg`,
+}));
+
+async function downscaled(src: string): Promise<HTMLImageElement> {
+  const img = new window.Image();
+  img.src = src;
+  await img.decode();
+  const { width, height } = targetSize(img.naturalWidth, img.naturalHeight);
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
+  const out = new window.Image();
+  out.src = canvas.toDataURL("image/jpeg", 0.9);
+  await out.decode();
+  return out;
+}
 
 type Row = { id: string; json: string };
 
@@ -25,6 +47,17 @@ export function Extractor() {
             id: s.id,
             json: JSON.stringify({ sample: s.id, width: d.width, height: d.height, people: d.people }, null, 2),
           });
+        }
+        for (const p of POSTURE_PHOTOS) {
+          try {
+            const d = engine.detectImage(await downscaled(p.src));
+            out.push({
+              id: p.id,
+              json: JSON.stringify({ sample: p.id, width: d.width, height: d.height, people: d.people }, null, 2),
+            });
+          } catch {
+            // The posture photos are local only; skip them when missing.
+          }
         }
         if (!cancelled) setRows(out);
       } finally {

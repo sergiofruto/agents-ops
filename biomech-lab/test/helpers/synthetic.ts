@@ -8,8 +8,10 @@ import {
 export const W = 1600;
 export const H = 900;
 
-/** [x, y] in pixels, optionally [x, y, visibility]. */
-export type PxSpec = Partial<Record<Joint, [number, number] | [number, number, number]>>;
+/** [x, y] in pixels, optionally [x, y, visibility] or [x, y, visibility, z]. */
+export type PxSpec = Partial<
+  Record<Joint, [number, number] | [number, number, number] | [number, number, number, number]>
+>;
 
 export function rawFromPixels(
   spec: PxSpec,
@@ -27,7 +29,7 @@ export function rawFromPixels(
     raw[JOINT_INDEX[j]] = {
       x: p[0] / width,
       y: p[1] / height,
-      z: 0,
+      z: p[3] ?? 0,
       visibility: p[2] ?? opts.visibility ?? 1,
     };
   }

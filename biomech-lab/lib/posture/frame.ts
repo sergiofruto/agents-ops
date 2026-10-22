@@ -45,7 +45,23 @@ export function facing(body: Body): 1 | -1 | null {
   return dx > 0 ? 1 : dx < 0 ? -1 : null;
 }
 
-/** Mean visibility of the nose and both eyes: high when the face is toward the camera. */
-export function faceVisibility(body: Body): number {
-  return (body.visibility("nose") + body.visibility("leftEye") + body.visibility("rightEye")) / 3;
+/**
+ * Whether the person faces the camera (front photo) or turns their back (back photo).
+ * Shape alone can't tell, and MediaPipe reports the face as visible either way, so two
+ * signals vote: MediaPipe's left/right labels (the left shoulder sits image-right when
+ * facing the camera) and depth (the nose is closer to the camera than the ears).
+ * Returns null when the signals disagree or neither is available.
+ */
+export function facesCamera(body: Body): boolean | null {
+  const votes: boolean[] = [];
+  if (body.usable("leftShoulder") && body.usable("rightShoulder")) {
+    const dx = body.point("leftShoulder").x - body.point("rightShoulder").x;
+    if (dx !== 0) votes.push(dx > 0);
+  }
+  if (body.usable("nose") && body.usable("leftEar") && body.usable("rightEar")) {
+    const dz = body.depth("nose") - (body.depth("leftEar") + body.depth("rightEar")) / 2;
+    if (dz !== 0) votes.push(dz < 0);
+  }
+  if (votes.length === 0 || votes.some((v) => v !== votes[0])) return null;
+  return votes[0];
 }
