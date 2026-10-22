@@ -1,6 +1,6 @@
 import { toBody } from "@/lib/body";
 import { framingOk, inferView } from "@/lib/view";
-import { HEIGHT_MAX_CM, HEIGHT_MIN_CM } from "./config";
+import { HEIGHT_MAX_CM, HEIGHT_MIN_CM, MIN_EAR_TO_FLOOR_PX } from "./config";
 import type { PhotoInput } from "./findings";
 import { earToFloorPx, facesCamera, type PostureView } from "./frame";
 
@@ -8,6 +8,7 @@ export type StepRejection =
   | "no_person"
   | "multiple_people"
   | "framing"
+  | "too_small"
   | "wrong_view_side"
   | "wrong_view_front"
   | "looks_like_back"
@@ -18,6 +19,7 @@ export const REJECTION_MESSAGE: Record<StepRejection, string> = {
   no_person: "We couldn't find a person. Step back so your whole body is in frame.",
   multiple_people: "Make sure you're alone in the frame.",
   framing: "Step back so your whole body, including your feet, is in frame.",
+  too_small: "This photo is too small to measure. Use a larger photo, or stand closer so you fill more of the frame.",
   wrong_view_side: "Turn a bit more to the side of the camera.",
   wrong_view_front: "Turn a bit more to face the camera.",
   looks_like_back: "This looks like a back photo. Face the camera.",
@@ -35,7 +37,9 @@ export function validateStep(
   if (photo.people.length > 1) return fail("multiple_people");
 
   const body = toBody(photo.people[0], photo.width, photo.height);
-  if (!framingOk(body) || earToFloorPx(body) === null) return fail("framing");
+  const span = earToFloorPx(body);
+  if (!framingOk(body) || span === null) return fail("framing");
+  if (span < MIN_EAR_TO_FLOOR_PX) return fail("too_small");
 
   const seen = inferView(body);
   if (view === "side" && seen !== "side") return fail("wrong_view_side");

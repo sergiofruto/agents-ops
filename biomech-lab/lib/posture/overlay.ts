@@ -4,6 +4,7 @@ import { nearSide } from "@/lib/poses/helpers";
 import type { FindingId } from "./config";
 import type { Finding, PostureStatus } from "./findings";
 import type { PostureFrame } from "./frame";
+import { plumbPoint } from "./measure";
 
 export type PostureLine = { x1: number; y1: number; x2: number; y2: number; status: PostureStatus; dashed?: boolean };
 export type PostureDot = { x: number; y: number; status: PostureStatus };
@@ -37,15 +38,15 @@ export function coronalOverlay(frame: PostureFrame, findings: Finding[]): Postur
   return { lines, dots };
 }
 
-/** Side: dashed plumb line through the near ankle and status-colored dots on ear, shoulder, hip, knee. */
+/** Side: dashed plumb line through the midfoot (or ankle) and status-colored dots on ear, shoulder, hip, knee. */
 export function sagittalOverlay(frame: PostureFrame, findings: Finding[]): PostureOverlayGeometry {
   const { body } = frame;
   const s = nearSide(body);
   const lines: PostureLine[] = [];
   const dots: PostureDot[] = [];
-  const ankle = joint(s, "Ankle");
-  if (body.usable(ankle)) {
-    const x = body.point(ankle).x;
+  const plumb = plumbPoint(frame);
+  if (plumb) {
+    const x = plumb.x;
     lines.push({ x1: x, y1: 0, x2: x, y2: body.height, status: "aligned", dashed: true });
   }
   const marks: ["Ear" | "Shoulder" | "Hip" | "Knee", FindingId][] = [

@@ -53,3 +53,11 @@ export function measuredSentence(f: Finding): string {
         : "Your heels sit upright.";
   }
 }
+
+/** "front 1° · back 3°" for findings measured on both photos; "" otherwise. */
+export function perViewText(f: Finding): string {
+  if (!("front" in f.perView) || !("back" in f.perView)) return "";
+  const fmt = (v: number | null | undefined) =>
+    v === null || v === undefined ? "-" : f.unit === "cm" ? formatCm(v) : formatDeg(v);
+  return `front ${fmt(f.perView.front)} · back ${fmt(f.perView.back)}`;
+}

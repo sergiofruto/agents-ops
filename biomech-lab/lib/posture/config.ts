@@ -50,3 +50,7 @@ export const MAX_SIDE_PX = 1280;
 export const TRAGION_RATIO = 0.936;
 export const HEIGHT_MIN_CM = 120;
 export const HEIGHT_MAX_CM = 220;
+/** Heel→ankle segments shorter than this (px) can't support a heel angle; 1 px of error ≈ 1°. */
+export const HEEL_MIN_SEGMENT_PX = 60;
+/** Ear-to-floor span (px) below which tilts and offsets fall under landmark noise. */
+export const MIN_EAR_TO_FLOOR_PX = 500;

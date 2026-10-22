@@ -1,7 +1,10 @@
 import { expect, test } from "vitest";
 import { canShowResults, flowReducer, initialFlow, type FlowState, type PhotoState } from "@/lib/posture/flow";
 
-const photo = (id: string): PhotoState => ({
+const VIEW_OF: Record<string, PhotoState["view"]> = { f: "front", f2: "front", s: "side", b: "back" };
+
+const photo = (id: string, view: PhotoState["view"] = VIEW_OF[id]): PhotoState => ({
+  view,
   input: { people: [], width: 1, height: 1 },
   url: `blob:${id}`,
   fingerprint: id,
@@ -53,4 +56,12 @@ test("photo steps can't be reached before the height is set", () => {
 
 test("reset returns to the start", () => {
   expect(flowReducer(complete(), { type: "reset" })).toEqual(initialFlow);
+});
+
+test("a photo checked for another view is never accepted", () => {
+  const atFront = flowReducer(initialFlow, { type: "setHeight", heightCm: 175 });
+  const stale = flowReducer(atFront, { type: "acceptPhoto", view: "front", photo: photo("s", "side") });
+  expect(stale).toBe(atFront);
+  const offStep = flowReducer(atFront, { type: "acceptPhoto", view: "side", photo: photo("s") });
+  expect(offStep).toBe(atFront);
 });

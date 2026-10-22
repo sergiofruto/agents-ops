@@ -19,7 +19,7 @@ const side = load("side");
 const back = load("back");
 
 /** Recorded on first extraction (2026-10-22) as observed score ± 5, height 180 cm. */
-const EXPECTED = { min: 40, max: 50 }; // observed 45
+const EXPECTED = { min: 53, max: 63 }; // observed 58 (45 before midfoot plumb + heel min segment)
 
 describe("golden posture photos", () => {
   test.each([

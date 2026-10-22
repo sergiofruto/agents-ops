@@ -77,6 +77,14 @@ describe("validateStep", () => {
     expect(validateStep("front", p)).toEqual({ ok: false, reason: "framing" });
   });
 
+  test("a photo too small to measure precisely is rejected", () => {
+    const half = Object.fromEntries(
+      Object.entries(FRONT).map(([j, p]) => [j, [p![0] / 2, p![1] / 2, ...p!.slice(2)]]),
+    ) as PxSpec;
+    const small: PhotoInput = { people: [rawFromPixels(half, { width: W / 2, height: HT / 2 })], width: W / 2, height: HT / 2 };
+    expect(validateStep("front", small)).toEqual({ ok: false, reason: "too_small" });
+  });
+
   test("people count comes first", () => {
     expect(validateStep("front", { ...photo(FRONT), people: [] })).toEqual({ ok: false, reason: "no_person" });
     const p = photo(FRONT);

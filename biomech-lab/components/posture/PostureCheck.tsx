@@ -54,6 +54,9 @@ export function PostureCheck() {
   }
 
   function goTo(step: FlowStep) {
+    // Drop any photo still being checked for the step we're leaving.
+    requestIdRef.current++;
+    setBusy(false);
     clearCandidate();
     dispatch({ type: "goTo", step });
   }
@@ -77,7 +80,7 @@ export function PostureCheck() {
         setError(REJECTION_MESSAGE[check.reason]);
         return;
       }
-      setCandidate({ input, url, fingerprint });
+      setCandidate({ view, input, url, fingerprint });
     } catch (e) {
       release(url);
       if (id !== requestIdRef.current) return;

@@ -43,18 +43,29 @@ describe("measureCoronal", () => {
   });
 
   test("heel alignment reports the worse heel on the back view only", () => {
-    const off = (deg: number) => 40 * Math.tan(deg * DEG);
+    const off = (deg: number) => 80 * Math.tan(deg * DEG);
     const spec: PxSpec = {
       ...CORONAL,
       leftAnkle: [740, 1000],
-      leftHeel: [740 - off(3), 1040],
+      leftHeel: [740 - off(3), 1080],
       rightAnkle: [860, 1000], // back view: client's right is image-right
-      rightHeel: [860 + off(8), 1040],
+      rightHeel: [860 + off(8), 1080],
     };
     const back = measureCoronal(frame("back", px(spec))).heelAlignment;
     expect(back?.deg).toBeCloseTo(8, 6);
     expect(back?.side).toBe("right");
     expect(measureCoronal(frame("front", px(spec))).heelAlignment).toBeNull();
+  });
+
+  test("heel segments too short to measure reliably are not measured", () => {
+    const spec: PxSpec = {
+      ...CORONAL,
+      leftAnkle: [740, 1000],
+      leftHeel: [745, 1030],
+      rightAnkle: [860, 1000],
+      rightHeel: [868, 1030],
+    };
+    expect(measureCoronal(frame("back", px(spec))).heelAlignment).toBeNull();
   });
 
   test("no cm scale leaves cm measures null but keeps degrees", () => {
@@ -101,6 +112,19 @@ describe("measureSagittal", () => {
     expect(measureSagittal(frame("side", behind)).kneeHyperextension).toBeCloseTo(6, 1);
     expect(measureSagittal(frame("side", mirror(behind))).kneeHyperextension).toBeCloseTo(6, 1);
     expect(measureSagittal(frame("side", bent)).kneeHyperextension).toBeCloseTo(-6, 1);
+  });
+
+  test("hips forward is measured from the midfoot, falling back to the ankle", () => {
+    const spec: PxSpec = {
+      ...sideKnee(0),
+      leftHip: [645, 500],
+      leftHeel: [580, 1030],
+      leftFootIndex: [680, 1030], // midfoot x 630
+    };
+    expect(measureSagittal(frame("side", px(spec))).hipsForward).toBeCloseTo(3, 6);
+    expect(measureSagittal(frame("side", mirror(px(spec)))).hipsForward).toBeCloseTo(3, 6);
+    const noFoot = occlude(px(spec), ["leftHeel", "leftFootIndex"]);
+    expect(measureSagittal(frame("side", noFoot)).hipsForward).toBeCloseTo(9, 6);
   });
 
   test("an unusable near ear leaves forward head unmeasured", () => {

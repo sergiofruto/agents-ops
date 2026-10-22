@@ -1,5 +1,6 @@
-import { angle, tiltFromHorizontal, tiltFromVertical, type Point } from "@/lib/geometry";
+import { angle, distance, tiltFromHorizontal, tiltFromVertical, type Point } from "@/lib/geometry";
 import { joint, type Joint } from "@/lib/landmarks";
+import { HEEL_MIN_SEGMENT_PX } from "./config";
 import { nearSide } from "@/lib/poses/helpers";
 import { anatomicalRight, facing, type PostureFrame } from "./frame";
 
@@ -23,7 +24,7 @@ export type SagittalMeasures = {
   forwardHead: number | null;
   /** Degrees of the ear-shoulder line from horizontal; info only (approximates CVA). */
   earShoulderAngle: number | null;
-  /** Cm, + = hip ahead of the ankle. */
+  /** Cm, + = hip ahead of the plumb point (midfoot, or the ankle when the foot isn't usable). */
   hipsForward: number | null;
   /** 180 − hip-knee-ankle angle, + when the knee sits behind the hip-ankle line. */
   kneeHyperextension: number | null;
@@ -63,7 +64,7 @@ export function measureCoronal(frame: PostureFrame): CoronalMeasures {
     for (const s of ["left", "right"] as const) {
       const heel = joint(s, "Heel");
       const ankle = joint(s, "Ankle");
-      if (body.usable(heel) && body.usable(ankle)) {
+      if (body.usable(heel) && body.usable(ankle) && distance(body.point(heel), body.point(ankle)) >= HEEL_MIN_SEGMENT_PX) {
         tilts.push({ deg: tiltFromVertical(body.point(heel), body.point(ankle)), x: body.point(ankle).x });
       }
     }
@@ -114,7 +115,25 @@ export function measureSagittal(frame: PostureFrame): SagittalMeasures {
   return {
     forwardHead: ahead(ear, shoulder),
     earShoulderAngle: ear && shoulder ? tiltFromHorizontal(shoulder, ear) : null,
-    hipsForward: ahead(hip, ankle),
+    hipsForward: ahead(hip, plumbPoint(frame)),
     kneeHyperextension,
   };
+}
+
+/**
+ * Where the side-view plumb line meets the floor. The classic line passes slightly in front
+ * of the outer ankle bone, so use the near foot's heel/toe midpoint, falling back to the ankle.
+ */
+export function plumbPoint(frame: PostureFrame): Point | null {
+  const { body } = frame;
+  const s = nearSide(body);
+  const heel = joint(s, "Heel");
+  const toe = joint(s, "FootIndex");
+  if (body.usable(heel) && body.usable(toe)) {
+    const h = body.point(heel);
+    const t = body.point(toe);
+    return { x: (h.x + t.x) / 2, y: Math.max(h.y, t.y) };
+  }
+  const ankle = joint(s, "Ankle");
+  return body.usable(ankle) ? body.point(ankle) : null;
 }

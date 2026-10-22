@@ -1,6 +1,6 @@
 import { CircleAlert, CircleCheck, CircleMinus, CircleX, type LucideIcon } from "lucide-react";
 import { FINDINGS } from "@/lib/posture/config";
-import { formatCm, formatDeg, measuredSentence } from "@/lib/posture/copy";
+import { formatCm, formatDeg, measuredSentence, perViewText } from "@/lib/posture/copy";
 import { LIBRARY } from "@/lib/posture/exercises";
 import type { Finding, PostureStatus } from "@/lib/posture/findings";
 
@@ -49,6 +49,7 @@ export function FindingRow({ finding }: { finding: Finding }) {
         <summary className="flex cursor-pointer list-none items-center">{header}</summary>
         <div className="mt-3 space-y-3 text-sm">
           <p className="text-fg-strong">{measuredSentence(finding)}</p>
+          {perViewText(finding) && <p className="font-mono text-xs text-fg-subtle">{perViewText(finding)}</p>}
           {finding.disagree && (
             <p className="text-partial">Front and back photos disagree; retake for a reliable reading.</p>
           )}

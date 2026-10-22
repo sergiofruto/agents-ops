@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { FINDINGS, type FindingId } from "@/lib/posture/config";
-import { formatCm, formatDeg, measuredSentence } from "@/lib/posture/copy";
+import { formatCm, formatDeg, measuredSentence, perViewText } from "@/lib/posture/copy";
 import { LIBRARY } from "@/lib/posture/exercises";
 import type { Finding, PostureStatus } from "@/lib/posture/findings";
 
@@ -91,5 +91,20 @@ describe("exercise library", () => {
         .toLowerCase();
       for (const word of FORBIDDEN) expect(all, `${f.id}: ${word}`).not.toContain(word);
     }
+  });
+});
+
+describe("perViewText", () => {
+  test("shows both photos' values for front and back findings", () => {
+    const f = { ...finding("shoulderLevel", 2, "slight", "right"), perView: { front: 1.2, back: -3.4 } };
+    expect(perViewText(f)).toBe("front 1° · back 3°");
+  });
+  test("is empty for single-view findings", () => {
+    const f = { ...finding("forwardHead", 4, "slight"), perView: { side: 4 } };
+    expect(perViewText(f)).toBe("");
+  });
+  test("marks a view that couldn't be measured", () => {
+    const f = { ...finding("trunkShift", 2, "slight", "left"), perView: { front: null, back: 2.2 } };
+    expect(perViewText(f)).toBe("front - · back 2 cm");
   });
 });

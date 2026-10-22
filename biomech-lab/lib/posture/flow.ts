@@ -1,7 +1,8 @@
 import type { PhotoInput } from "./findings";
 import type { PostureView } from "./frame";
 
-export type PhotoState = { input: PhotoInput; url: string; fingerprint: string };
+/** An accepted photo, tagged with the view it was checked for. */
+export type PhotoState = { view: PostureView; input: PhotoInput; url: string; fingerprint: string };
 
 export type FlowStep = "height" | PostureView | "results";
 
@@ -39,6 +40,8 @@ export function flowReducer(s: FlowState, a: FlowAction): FlowState {
       return { ...next, step: nextStep(next) };
     }
     case "acceptPhoto": {
+      // Only the photo checked for the step on screen can be accepted for it.
+      if (s.step !== a.view || a.photo.view !== a.view) return s;
       const next = { ...s, photos: { ...s.photos, [a.view]: a.photo } };
       return { ...next, step: nextStep(next) };
     }
