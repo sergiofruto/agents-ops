@@ -6,7 +6,8 @@ import { PrivacyAbout } from "@/components/PrivacyAbout";
 import { ReportsTeaser } from "@/components/ReportsTeaser";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteNav } from "@/components/SiteNav";
-import { container, label, sectionShell, sectionTitle } from "@/components/ui/styles";
+import Link from "next/link";
+import { container, focusRing, label, sectionShell, sectionTitle } from "@/components/ui/styles";
 
 export default function Home() {
   return (
@@ -22,6 +23,12 @@ export default function Home() {
             </h2>
             <p className="mt-3 max-w-2xl text-fg-muted">
               Warrior II and Tree facing the camera, Downward Dog from the side. Full body in frame.
+            </p>
+            <p className="mt-2 text-sm text-fg-muted">
+              Want a standing posture check instead?{" "}
+              <Link href="/posture" className={`rounded text-accent hover:underline ${focusRing}`}>
+                Try the posture check →
+              </Link>
             </p>
             <div className="mt-10">
               <PhotoLab />

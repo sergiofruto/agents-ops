@@ -18,6 +18,7 @@ export const APP_VERSION = "v1.1";
 
 export const NAV_LINKS = [
   { href: "/#analyze", label: "analyze" },
+  { href: "/posture", label: "posture" },
   { href: "/reports", label: "reports" },
   { href: "/#pipeline", label: "pipeline" },
   { href: "/#checks", label: "checks" },

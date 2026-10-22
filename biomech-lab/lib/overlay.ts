@@ -22,8 +22,10 @@ export const BONES: [Joint, Joint][] = [
   ["rightAnkle", "rightFootIndex"],
 ];
 
-/** Joints drawn as dots (ears are omitted to keep the head uncluttered). */
-export const OVERLAY_JOINTS: Joint[] = ALL_JOINTS.filter((j) => j !== "leftEar" && j !== "rightEar");
+const HEAD_DETAIL: Joint[] = ["leftEar", "rightEar", "leftEye", "rightEye"];
+
+/** Joints drawn as dots (ears and eyes are omitted to keep the head uncluttered). */
+export const OVERLAY_JOINTS: Joint[] = ALL_JOINTS.filter((j) => !HEAD_DETAIL.includes(j));
 
 export type OverlayGeometry = {
   width: number;
