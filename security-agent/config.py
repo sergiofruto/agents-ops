@@ -24,3 +24,9 @@ CHAT_MODEL = os.getenv("CHAT_MODEL", "claude-haiku-5-5")
 # Mac check
 PROJECTS_ROOT = Path(os.getenv("PROJECTS_ROOT", str(Path.home() / "Projects")))
 RUNAWAY_PROCESS_COUNT = int(os.getenv("RUNAWAY_PROCESS_COUNT", "30"))
+
+# USD per million (input, output) tokens. Source: claude-api skill model table, checked 2026-10-24.
+MODEL_PRICES: dict[str, tuple[float, float]] = {
+    "claude-haiku-5-5": (0.10, 0.50),
+    "claude-sonnet-5-5": (2.00, 10.00),
+}
