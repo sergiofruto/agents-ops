@@ -30,3 +30,28 @@ MODEL_PRICES: dict[str, tuple[float, float]] = {
     "claude-haiku-5-5": (0.10, 0.50),
     "claude-sonnet-5-5": (2.00, 10.00),
 }
+
+# Status page. "official" is (kind, url); kinds: statuspage, betterstack, statusio, aws.
+# Each URL was checked against the live service on 2026-10-24.
+PROVIDERS = [
+    {"id": "vercel", "name": "Vercel", "official": ("statuspage", "https://www.vercel-status.com/api/v2/summary.json"),
+     "probe": "https://api.vercel.com"},
+    {"id": "turso", "name": "Turso", "official": ("betterstack", "https://status.turso.tech/index.json"),
+     "probe": "https://api.turso.tech"},
+    {"id": "neon", "name": "Neon", "official": ("statusio", "https://api.status.io/1.0/status/6878fc85709daa75be6c7e3c"),
+     "probe": "https://console.neon.tech"},
+    {"id": "anthropic", "name": "Anthropic", "official": ("statuspage", "https://status.claude.com/api/v2/summary.json"),
+     "probe": "https://api.anthropic.com"},
+    {"id": "github", "name": "GitHub", "official": ("statuspage", "https://www.githubstatus.com/api/v2/summary.json"),
+     "probe": "https://api.github.com"},
+    {"id": "cloudflare", "name": "Cloudflare", "official": ("statuspage", "https://www.cloudflarestatus.com/api/v2/summary.json"),
+     "probe": "https://api.cloudflare.com"},
+    {"id": "aws", "name": "AWS", "official": ("aws", "https://health.aws.amazon.com/public/currentevents"),
+     "probe": "https://sts.amazonaws.com"},
+]
+DNS_RESOLVERS = [
+    ("dns-cloudflare", "Cloudflare DNS", "1.1.1.1"),
+    ("dns-google", "Google DNS", "8.8.8.8"),
+    ("dns-quad9", "Quad9", "9.9.9.9"),
+]
+STATUS_HISTORY_DAYS = 7
