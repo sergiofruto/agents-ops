@@ -1,0 +1,5 @@
+security.db*
+agent.log
+launchd.log
+.env
+__pycache__/
