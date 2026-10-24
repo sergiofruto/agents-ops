@@ -55,3 +55,26 @@ DNS_RESOLVERS = [
     ("dns-quad9", "Quad9", "9.9.9.9"),
 ]
 STATUS_HISTORY_DAYS = 7
+
+# Digest sources. "primary" can confirm an item on its own; "outlet" needs a second outlet.
+# Each URL was checked with feedparser / curl on 2026-10-24. Apple has no working security feed;
+# its exploited bugs arrive through CISA KEV.
+DIGEST_SOURCES = [
+    {"name": "CISA KEV", "kind": "primary", "type": "kev",
+     "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"},
+    {"name": "NVD (critical)", "kind": "primary", "type": "nvd",
+     "url": "https://services.nvd.nist.gov/rest/json/cves/2.0"},
+    {"name": "Microsoft MSRC", "kind": "primary", "type": "rss",
+     "url": "https://api.msrc.microsoft.com/update-guide/rss"},
+    {"name": "Chrome Releases", "kind": "primary", "type": "rss",
+     "url": "https://chromereleases.googleblog.com/feeds/posts/default", "title_filter": "Stable Channel Update"},
+    {"name": "AWS Security Bulletins", "kind": "primary", "type": "rss",
+     "url": "https://aws.amazon.com/security/security-bulletins/rss/feed/"},
+    {"name": "GitHub Security Blog", "kind": "outlet", "type": "rss", "url": "https://github.blog/security/feed/"},
+    {"name": "BleepingComputer", "kind": "outlet", "type": "rss", "url": "https://www.bleepingcomputer.com/feed/"},
+    {"name": "The Record", "kind": "outlet", "type": "rss", "url": "https://therecord.media/feed"},
+    {"name": "SecurityWeek", "kind": "outlet", "type": "rss", "url": "https://www.securityweek.com/feed/"},
+    {"name": "Krebs on Security", "kind": "outlet", "type": "rss", "url": "https://krebsonsecurity.com/feed/"},
+]
+DIGEST_MAX_PER_SOURCE = 20
+NVD_MIN_CVSS = 9.0
