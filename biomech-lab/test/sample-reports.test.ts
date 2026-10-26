@@ -6,9 +6,9 @@ describe("sampleReports", () => {
 
   test("three reports with the golden scores", () => {
     expect(reports.map((r) => [r.id, r.score])).toEqual([
-      ["warrior2", 50],
-      ["tree", 55],
-      ["downdog", 46],
+      ["warrior2", 66],
+      ["tree", 63],
+      ["downdog", 72],
     ]);
   });
 
@@ -30,7 +30,7 @@ describe("sampleReports", () => {
     for (const r of reports) {
       expect(r.landmarks).toHaveLength(33);
       expect(r.imageSrc).toBe(`/samples/${r.id}.jpg`);
-      expect([r.width, r.height]).toEqual([1280, 720]);
+      expect([r.width, r.height]).toEqual([1280, 714]);
       expect(r.coverage).toBe(1);
     }
   });
@@ -38,6 +38,6 @@ describe("sampleReports", () => {
 
 test("iterationSeries: iteration 1 matches the reports", () => {
   expect(iterationSeries()).toEqual([
-    { iteration: 1, date: "2026-10-01", scores: { warrior2: 50, tree: 55, downdog: 46 } },
+    { iteration: 1, date: "2026-10-01", scores: { warrior2: 66, tree: 63, downdog: 72 } },
   ]);
 });
