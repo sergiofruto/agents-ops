@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Digest</h1>
+{% if not digest %}
+  <p class="muted">No digest yet. It builds once a day from 07:00.</p>
+{% else %}
+  <p class="muted">{{ digest.day }} · {{ digest.entries|length }} items, each backed by a primary source or two outlets{% if not digest.used_ai %} · summaries unavailable today{% endif %}</p>
+  {% for e in digest.entries %}
+  <div class="card">
+    <strong>{{ e.title }}</strong>
+    {% if e.affects %}<span class="tag affects">affects you: {{ e.affects|join(', ') }}</span>{% endif %}
+    {% if e.kev %}<span class="tag kev">actively exploited</span>{% endif %}
+    {% if e.summary %}
+      <p>{{ e.summary }}</p>
+      {% if e.who %}<div><span class="muted">Who:</span> {{ e.who }}</div>{% endif %}
+      {% if e.action %}<div><span class="muted">Action:</span> {{ e.action }}</div>{% endif %}
+    {% else %}
+      <p class="muted">Summary unavailable. Read the sources below.</p>
+    {% endif %}
+    <ul class="mono">{% for s in e.sources %}<li>{{ s.source }}: <a href="{{ s.url }}" target="_blank" rel="noopener noreferrer">{{ s.title }}</a></li>{% endfor %}</ul>
+  </div>
+  {% endfor %}
+{% endif %}
+{% endblock %}

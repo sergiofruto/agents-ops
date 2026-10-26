@@ -78,3 +78,11 @@ def test_failing_source_is_skipped(db, fixture):
         raise OSError("offline")
     items = fetch_all(db, get=fake_get({"known_exploited": fixture("kev.json")}), parse=boom, now=NOW, sources=sources)
     assert len(items) == 2
+
+
+def test_non_http_links_are_dropped(db):
+    feed = {"entries": [{"title": "x", "link": "javascript:alert(1)", "summary": "", "published_parsed": NOW.utctimetuple()},
+                        {"title": "y", "link": "https://ok.com/a", "summary": "", "published_parsed": NOW.utctimetuple()}]}
+    sources = [{"name": "Feed", "kind": "outlet", "type": "rss", "url": "f"}]
+    items = fetch_all(db, get=fake_get({}), parse=lambda url: feed, now=NOW, sources=sources)
+    assert [i.url for i in items] == ["https://ok.com/a"]

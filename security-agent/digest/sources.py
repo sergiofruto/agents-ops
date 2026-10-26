@@ -118,7 +118,9 @@ def _rss_items(src, parse, since: datetime) -> list[Item]:
     for e in feed.get("entries", []):
         published = _entry_time(e)
         title, link = e.get("title", ""), e.get("link", "")
-        if not published or published < since or not link or (pattern and not pattern.search(title)):
+        # Only web links: a feed could carry javascript: or data: URLs, which the dashboard would render as hrefs
+        if not published or published < since or not link.startswith(("https://", "http://")) \
+                or (pattern and not pattern.search(title)):
             continue
         out.append(_make(src["kind"], src["name"], link, title, published, e.get("summary", "")))
     return out
