@@ -216,7 +216,7 @@ export default function ChatInterface({ sessionId, initialMessages = [], onNewSe
                 "What's the current threat landscape?",
                 "Tell me about the sky right now",
                 "What does the solar weather mean for SIGINT?",
-                "Explain the Hermetic correspondence to this week's CVEs",
+                "Explain the Hermetic correspondence to this week's signals",
                 "What should I watch in the South China Sea?",
               ].map(prompt => (
                 <button

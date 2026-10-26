@@ -12,8 +12,6 @@ export interface StatusData {
     total_signals: number;
     high_signals:  number;
     total_briefs:  number;
-    total_cves:    number;
-    kev_cves:      number;
   };
   latest_brief: {
     id:           number;

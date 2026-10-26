@@ -16,7 +16,7 @@ AGENT_VERSION = "0.1.0"
 # ---------------------------------------------------------------------------
 # Scan intervals
 # ---------------------------------------------------------------------------
-INTEL_INTERVAL_MINUTES  = int(os.getenv("INTEL_INTERVAL_MINUTES", "60"))   # OSINT + infosec scan
+INTEL_INTERVAL_MINUTES  = int(os.getenv("INTEL_INTERVAL_MINUTES", "60"))   # OSINT scan
 COSMIC_INTERVAL_MINUTES = int(os.getenv("COSMIC_INTERVAL_MINUTES", "360")) # Sky calculations (6h)
 BRIEF_INTERVAL_MINUTES  = int(os.getenv("BRIEF_INTERVAL_MINUTES", "120"))  # Synthesise + publish
 
@@ -40,26 +40,12 @@ OPENSKY_BASE = "https://opensky-network.org/api"
 OPENSKY_USERNAME = os.getenv("OPENSKY_USERNAME", "")
 OPENSKY_PASSWORD = os.getenv("OPENSKY_PASSWORD", "")
 
-# NIST NVD — CVE feed (optional API key for higher rate limits)
-NVD_API_KEY  = os.getenv("NVD_API_KEY", "")
-NVD_BASE     = "https://services.nvd.nist.gov/rest/json/cves/2.0"
-NVD_DAYS_BACK = int(os.getenv("NVD_DAYS_BACK", "3"))   # fetch CVEs published in last N days
-
-# CISA KEV — Known Exploited Vulnerabilities (no key)
-CISA_KEV_URL = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
-
-# AlienVault OTX — threat intelligence (optional)
-OTX_API_KEY = os.getenv("OTX_API_KEY", "")
-OTX_BASE    = "https://otx.alienvault.com/api/v1"
-
 # Shodan — infrastructure intel (optional)
 SHODAN_API_KEY = os.getenv("SHODAN_API_KEY", "")
 
 # MarineTraffic / aisstream.io (optional — for live AIS)
 AIS_API_KEY = os.getenv("AIS_API_KEY", "")
 
-# AWS Security Bulletins RSS
-AWS_SECURITY_RSS = "https://aws.amazon.com/security/security-bulletins/rss/feed/"
 
 # ---------------------------------------------------------------------------
 # Geographies of interest for OSINT scans

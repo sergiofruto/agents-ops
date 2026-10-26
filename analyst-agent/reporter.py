@@ -55,8 +55,6 @@ def _stats_panel() -> Panel:
 
     grid.add_row("Total signals",  str(stats["total_signals"]))
     grid.add_row("High/Critical",  str(stats["high_signals"]))
-    grid.add_row("CVEs tracked",   str(stats["total_cves"]))
-    grid.add_row("CISA KEV",       str(stats["kev_cves"]))
     grid.add_row("Briefs issued",  str(stats["total_briefs"]))
 
     if cosmic:

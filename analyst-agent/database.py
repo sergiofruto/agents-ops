@@ -4,7 +4,7 @@ database.py — SQLite persistence for The Analyst
 Tables:
   briefs         — synthesised intelligence briefs
   intel_signals  — raw signals from OSINT / infosec / cosmic scans
-  cves           — tracked CVE records
+  cves           — CVE records from before security news moved to security-agent (no longer written)
 """
 
 from __future__ import annotations
@@ -145,46 +145,6 @@ def mark_signals_used(ids: list[int]) -> None:
 
 
 # ---------------------------------------------------------------------------
-# CVE helpers
-# ---------------------------------------------------------------------------
-
-def upsert_cve(
-    cve_id: str,
-    published: str,
-    severity: str,
-    cvss: float | None,
-    description: str,
-    cisa_kev: bool = False,
-    aws_related: bool = False,
-) -> None:
-    with _conn() as conn:
-        conn.execute(
-            """INSERT INTO cves
-               (cve_id, published, severity, cvss, description, cisa_kev, aws_related, first_seen)
-               VALUES (?,?,?,?,?,?,?,?)
-               ON CONFLICT(cve_id) DO UPDATE SET
-                 severity    = excluded.severity,
-                 cvss        = excluded.cvss,
-                 cisa_kev    = excluded.cisa_kev,
-                 aws_related = excluded.aws_related""",
-            (
-                cve_id, published, severity, cvss, description,
-                int(cisa_kev), int(aws_related),
-                datetime.utcnow().isoformat(),
-            ),
-        )
-
-
-def get_recent_cves(limit: int = 20, only_kev: bool = False) -> list[sqlite3.Row]:
-    with _conn() as conn:
-        q = "SELECT * FROM cves"
-        if only_kev:
-            q += " WHERE cisa_kev = 1"
-        q += " ORDER BY published DESC LIMIT ?"
-        return conn.execute(q, (limit,)).fetchall()
-
-
-# ---------------------------------------------------------------------------
 # Cosmic snapshot helpers
 # ---------------------------------------------------------------------------
 
@@ -322,12 +282,8 @@ def get_stats() -> dict:
             "SELECT COUNT(*) FROM intel_signals WHERE severity IN ('HIGH','CRITICAL')"
         ).fetchone()[0]
         total_briefs  = conn.execute("SELECT COUNT(*) FROM briefs").fetchone()[0]
-        total_cves    = conn.execute("SELECT COUNT(*) FROM cves").fetchone()[0]
-        kev_cves      = conn.execute("SELECT COUNT(*) FROM cves WHERE cisa_kev=1").fetchone()[0]
         return {
             "total_signals": total_signals,
             "high_signals":  high_signals,
             "total_briefs":  total_briefs,
-            "total_cves":    total_cves,
-            "kev_cves":      kev_cves,
         }
