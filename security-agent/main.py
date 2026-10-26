@@ -14,6 +14,19 @@ from datetime import datetime
 import config
 import database
 import scheduler
+# Import everything both threads use before the web thread starts. Two threads doing their first
+# `import flask` and `import requests` at once deadlocked on Python's import locks (urllib3's bundled
+# six importer), which froze the agent for 40 hours with no error.
+import analyst  # noqa: F401,E402
+import digest.build  # noqa: F401,E402
+import digest.inventory  # noqa: F401,E402
+import digest.sources  # noqa: F401,E402
+import scan  # noqa: F401,E402
+import status.service  # noqa: F401,E402
+from web.app import create_app  # noqa: E402
+import anthropic  # noqa: F401,E402
+import dns.resolver  # noqa: F401,E402
+import werkzeug.serving  # noqa: F401,E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -25,7 +38,6 @@ logger = logging.getLogger("main")
 
 
 def _serve():
-    from web.app import create_app
     create_app().run(host=config.WEB_HOST, port=config.WEB_PORT, debug=False, use_reloader=False)
 
 

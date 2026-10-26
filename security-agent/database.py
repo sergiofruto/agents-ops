@@ -62,7 +62,11 @@ CREATE TABLE IF NOT EXISTS seen_items (
 );
 CREATE TABLE IF NOT EXISTS job_runs (
     job      TEXT PRIMARY KEY,
-    last_run TEXT NOT NULL
+    last_run TEXT NOT NULL      -- last successful run
+);
+CREATE TABLE IF NOT EXISTS job_attempts (
+    job          TEXT PRIMARY KEY,
+    attempted_at TEXT NOT NULL  -- written before the job starts, so a hang can't loop on restart
 );
 CREATE TABLE IF NOT EXISTS ai_usage (
     day           TEXT NOT NULL,
@@ -91,7 +95,7 @@ SELECT 1 AS id,
        (SELECT COUNT(*) FROM latest_status WHERE state IN ('degraded', 'down')) AS providers_not_up,
        (SELECT COUNT(*) FROM digest_entries
          WHERE digest_id = (SELECT MAX(id) FROM digests) AND affects_json NOT IN ('[]', '')) AS digest_affecting,
-       strftime('%Y-%m-%dT%H:%M:%S', 'now', 'localtime') AS updated_at;
+       (SELECT MAX(checked_at) FROM status_checks) AS updated_at;
 """
 
 

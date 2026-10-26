@@ -45,6 +45,11 @@ def _plain_entry(items: list[Item]) -> dict:
     return {"items": items, "title": lead.title, "summary": None, "who": None, "action": None}
 
 
+def _text(value) -> str | None:
+    """Claude's free-text fields, kept only when they really are text."""
+    return value.strip() if isinstance(value, str) and value.strip() else None
+
+
 def build_digest(conn: sqlite3.Connection, items: list[Item], claude: Claude | None, terms: set[str],
                  *, now: datetime | None = None) -> int:
     now = now or datetime.now()
@@ -57,14 +62,18 @@ def build_digest(conn: sqlite3.Connection, items: list[Item], claude: Claude | N
         for g in groups:
             if not isinstance(g, dict):
                 continue
+            ids = g.get("item_ids")
+            if not isinstance(ids, list):
+                continue
             members = []
-            for iid in g.get("item_ids") or []:
-                if iid in by_id and iid not in used:
+            for iid in ids:
+                if isinstance(iid, str) and iid in by_id and iid not in used:
                     used.add(iid)
                     members.append(by_id[iid])
             if members:
-                entries.append({"items": members, "title": str(g.get("title") or members[0].title),
-                                "summary": g.get("summary"), "who": g.get("who"), "action": g.get("action")})
+                entries.append({"items": members, "title": _text(g.get("title")) or members[0].title,
+                                "summary": _text(g.get("summary")), "who": _text(g.get("who")),
+                                "action": _text(g.get("action"))})
     for cl in clusters:
         rest = [i for i in cl if i.id not in used]
         if rest:
@@ -73,23 +82,29 @@ def build_digest(conn: sqlite3.Connection, items: list[Item], claude: Claude | N
     kept = []
     for e in entries:
         if not confirmable(e["items"]):
-            continue
+            continue  # left unseen, so a second outlet tomorrow can still confirm it
         e["affects"] = affects(" ".join(f"{i.title} {i.text}" for i in e["items"]), terms)
         e["kev"] = any(i.kev for i in e["items"])
         kept.append(e)
     kept.sort(key=lambda e: (not e["affects"], not e["kev"], -len(e["items"])))
+    confirmed = [i for e in kept for i in e["items"]]
     kept = kept[:config.DIGEST_MAX_ENTRIES]
 
+    with conn:  # all or nothing: a failure must not leave a half-written digest
+        did = _store(conn, kept, confirmed, now, used_ai=groups is not None)
+    return did
+
+
+def _store(conn: sqlite3.Connection, kept: list[dict], confirmed: list[Item], now: datetime, *, used_ai: bool) -> int:
     cur = conn.execute("INSERT INTO digests (day, built_at, used_ai) VALUES (?,?,?)",
-                       (now.date().isoformat(), now.isoformat(), int(groups is not None)))
+                       (now.date().isoformat(), now.isoformat(), int(used_ai)))
     did = cur.lastrowid
     for rank, e in enumerate(kept):
         sources = [{"source": i.source, "url": i.url, "title": i.title} for i in e["items"]]
         conn.execute("INSERT INTO digest_entries VALUES (?,?,?,?,?,?,?,?,?)",
                      (did, rank, e["title"], e["summary"], e["who"], e["action"],
                       json.dumps(e["affects"]), json.dumps(sources), int(e["kev"])))
-    conn.executemany("INSERT OR IGNORE INTO seen_items VALUES (?, ?)", [(i.url, now.isoformat()) for i in items])
-    conn.commit()
+    conn.executemany("INSERT OR IGNORE INTO seen_items VALUES (?, ?)", [(i.url, now.isoformat()) for i in confirmed])
     return did
 
 

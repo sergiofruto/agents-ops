@@ -9,7 +9,7 @@
     <span class="state-{{ r.state }}">{{ r.state.replace('_', ' ') }}</span>
   </div>
   {% if r.incident %}<div class="muted">{{ r.incident }}</div>{% endif %}
-  <div class="mono muted">{% if r.checked_at %}checked {{ r.checked_at[11:16] }}{% if r.probe_ms %} · {{ r.probe_ms }} ms{% endif %}{% else %}not checked yet{% endif %}</div>
+  <div class="mono muted">{% if r.checked_at %}checked {{ r.checked_at[5:16].replace('T', ' ') }}{% if r.probe_ms %} · {{ r.probe_ms }} ms{% endif %}{% else %}not checked yet{% endif %}</div>
   <div class="bar">{% for h in r.history %}<span class="cell {{ h.state }}" title="{{ h.start[:13].replace('T', ' ') }}h: {{ h.state }}"></span>{% endfor %}</div>
 </div>
 {% endfor %}

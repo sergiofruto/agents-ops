@@ -1,6 +1,8 @@
 """Which jobs are due, run one at a time. Missed jobs (sleep, Mac off) run once on startup."""
+import faulthandler
 import logging
 import sqlite3
+import sys
 from datetime import datetime, timedelta
 from typing import Callable
 
@@ -12,6 +14,11 @@ STATUS_EVERY = timedelta(minutes=5)
 SCAN_EVERY = timedelta(days=7)
 DIGEST_HOUR = 7
 ORDER = ("status", "digest", "scan")
+# A failed job waits this long before it is tried again
+RETRY_AFTER = {"status": STATUS_EVERY, "digest": timedelta(minutes=30), "scan": timedelta(hours=1)}
+# A job still running after this long is hung: dump every thread's stack to the log and exit,
+# so launchd (KeepAlive SuccessfulExit=false) restarts the agent
+WATCHDOG_SECONDS = {"status": 180, "digest": 1800, "scan": 1800}
 
 
 def due(job: str, last_run: datetime | None, now: datetime) -> bool:
@@ -46,24 +53,47 @@ def _scan(conn):
 JOBS: dict[str, Callable[[sqlite3.Connection], None]] = {"status": _status, "digest": _digest, "scan": _scan}
 
 
-def _last_run(conn, job: str) -> datetime | None:
-    row = conn.execute("SELECT last_run FROM job_runs WHERE job=?", (job,)).fetchone()
-    return datetime.fromisoformat(row[0]) if row else None
+def _last(conn, table: str, job: str) -> datetime | None:
+    row = conn.execute(f"SELECT * FROM {table} WHERE job=?", (job,)).fetchone()
+    return datetime.fromisoformat(row[1]) if row else None
+
+
+_TIME_COLUMN = {"job_runs": "last_run", "job_attempts": "attempted_at"}
+
+
+def _record(conn, table: str, job: str, now: datetime) -> None:
+    col = _TIME_COLUMN[table]
+    conn.execute(f"INSERT INTO {table} VALUES (?, ?) ON CONFLICT(job) DO UPDATE SET {col}=excluded.{col}",
+                 (job, now.isoformat()))
+    conn.commit()
+
+
+def _log_stream():
+    for h in logging.getLogger().handlers:
+        if isinstance(h, logging.FileHandler):
+            return h.stream
+    return sys.stderr
 
 
 def run_due_jobs(conn: sqlite3.Connection, now: datetime) -> list[str]:
     ran = []
     for job in ORDER:
-        if not due(job, _last_run(conn, job), now):
+        last_ok, last_try = _last(conn, "job_runs", job), _last(conn, "job_attempts", job)
+        if not due(job, last_ok, now):
+            continue
+        failed_recently = last_try and (last_ok is None or last_try > last_ok) and now - last_try < RETRY_AFTER[job]
+        if failed_recently:
             continue
         logger.info("job %s starting", job)
+        _record(conn, "job_attempts", job, now)
+        faulthandler.dump_traceback_later(WATCHDOG_SECONDS[job], exit=True, file=_log_stream())
         try:
             JOBS[job](conn)
+            _record(conn, "job_runs", job, now)
         except Exception:
-            logger.exception("job %s failed", job)
-        # Recorded even after a failure, so a broken job waits for its next slot instead of looping
-        conn.execute("INSERT INTO job_runs VALUES (?, ?) ON CONFLICT(job) DO UPDATE SET last_run=excluded.last_run",
-                     (job, now.isoformat()))
-        conn.commit()
+            conn.rollback()
+            logger.exception("job %s failed, retrying in %s", job, RETRY_AFTER[job])
+        finally:
+            faulthandler.cancel_dump_traceback_later()
         ran.append(job)
     return ran

@@ -126,13 +126,19 @@ def _rss_items(src, parse, since: datetime) -> list[Item]:
     return out
 
 
+class SourcesUnavailable(Exception):
+    """Every source failed: most likely offline. The scheduler retries later."""
+
+
 def fetch_all(conn: sqlite3.Connection, *, window_hours: int = 36, get=requests.get, parse=_parse_url,
               now: datetime | None = None, sources: list[dict] | None = None) -> list[Item]:
     now = now or datetime.now()
     since = now - timedelta(hours=window_hours)
     seen = {r[0] for r in conn.execute("SELECT url FROM seen_items")}
     items: list[Item] = []
-    for src in sources or config.DIGEST_SOURCES:
+    sources = sources or config.DIGEST_SOURCES
+    failed = 0
+    for src in sources:
         try:
             if src["type"] == "kev":
                 got = _kev_items(src, get, since)
@@ -142,9 +148,12 @@ def fetch_all(conn: sqlite3.Connection, *, window_hours: int = 36, get=requests.
                 got = _rss_items(src, parse, since)
         except Exception as exc:
             logger.warning("digest source %s failed: %s", src["name"], type(exc).__name__)
+            failed += 1
             continue
         got.sort(key=lambda i: i.published, reverse=True)
         items += got[:config.DIGEST_MAX_PER_SOURCE]
+    if failed == len(sources):
+        raise SourcesUnavailable(f"all {failed} digest sources failed")
     unique, urls = [], set()
     for i in items:
         if i.url not in seen and i.url not in urls:

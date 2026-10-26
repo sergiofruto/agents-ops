@@ -7,7 +7,8 @@ from status.official import State, fetch_official
 from status.probe import probe_dns, probe_https
 
 SEVERITY = {"down": 3, "degraded": 2, "unknown": 1, "up": 0}
-OFFLINE = "Offline: no checks possible"
+OFFLINE = "Offline or network not ready: most checks failed"
+STALE_AFTER = timedelta(minutes=15)
 
 
 def combine(official: State, probe_ok: bool) -> tuple[State, str | None]:
@@ -38,8 +39,8 @@ def check_all(conn: sqlite3.Connection, *, fetch=fetch_official, https=probe_htt
         ok, ms = dns(ip)
         rows.append(dict(service=sid, name=name, state="up" if ok else "down", official=None,
                          probe_ok=int(ok), probe_ms=ms, incident=None))
-    if not any(r["probe_ok"] for r in rows):
-        # Every check failed at once: this Mac is offline, not every provider
+    if sum(r["probe_ok"] for r in rows) * 2 < len(rows):
+        # Most checks failed at once: this Mac is offline or still joining a network, not every provider
         for r in rows:
             r.update(state="no_data", incident=OFFLINE)
     for r in rows:
@@ -51,11 +52,16 @@ def check_all(conn: sqlite3.Connection, *, fetch=fetch_official, https=probe_htt
     return rows
 
 
-def current(conn: sqlite3.Connection) -> list[dict]:
+def current(conn: sqlite3.Connection, now: datetime | None = None) -> list[dict]:
+    """Latest row per service. A row older than STALE_AFTER means the agent stopped checking: no data."""
+    now = now or datetime.now()
     out = []
     for sid, name in _services():
         r = conn.execute("SELECT * FROM status_checks WHERE service=? ORDER BY checked_at DESC LIMIT 1", (sid,)).fetchone()
-        out.append({"service": sid, "name": name, **(dict(r) if r else {"state": "no_data", "checked_at": None, "incident": None})})
+        row = dict(r) if r else {"state": "no_data", "checked_at": None, "incident": None}
+        if r and now - datetime.fromisoformat(r["checked_at"]) > STALE_AFTER:
+            row.update(state="no_data", incident=f"Stale: last check {r['checked_at'][:16].replace('T', ' ')}")
+        out.append({"service": sid, "name": name, **row})
     return out
 
 

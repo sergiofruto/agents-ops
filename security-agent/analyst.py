@@ -20,7 +20,8 @@ class Claude:
         client = None
         if config.ANTHROPIC_API_KEY:
             import anthropic
-            client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
+            # Short timeout: the SDK default (600s, 2 retries) would outlast the job watchdog
+            client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY, timeout=60, max_retries=1)
         return cls(client, Budget(conn))
 
     @property

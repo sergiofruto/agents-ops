@@ -16,10 +16,16 @@
     {% if not_up %}
       <div class="big state-degraded">{{ not_up|length }} not up</div>
       <div class="muted">{{ not_up|map(attribute='name')|join(', ') }}</div>
-    {% elif services and services[0].checked_at %}
-      <div class="big state-up">All up</div>
-    {% else %}
+    {% elif no_data|length == services|length and services|selectattr('checked_at')|list %}
+      <div class="big">Offline / no data</div>
+      <div class="muted">{{ (services|selectattr('incident')|first).incident }}</div>
+    {% elif no_data|length == services|length %}
       <div class="big">No data yet</div>
+    {% elif no_data %}
+      <div class="big state-up">{{ services|length - no_data|length }} up</div>
+      <div class="muted">No data: {{ no_data|map(attribute='name')|join(', ') }}</div>
+    {% else %}
+      <div class="big state-up">All up</div>
     {% endif %}
   </div>
   <div class="card">

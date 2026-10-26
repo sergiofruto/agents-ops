@@ -2,7 +2,7 @@
 import threading
 from datetime import date, datetime
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, abort, jsonify, render_template, request
 
 import config
 import database
@@ -39,6 +39,18 @@ def _valid_messages(body) -> list[dict] | None:
 
 def create_app(db_factory=_thread_conn, claude_factory=Claude.from_config) -> Flask:
     app = Flask(__name__)
+    hosts = {"127.0.0.1", "localhost", f"127.0.0.1:{config.WEB_PORT}", f"localhost:{config.WEB_PORT}"}
+    origins = {f"http://127.0.0.1:{config.WEB_PORT}", f"http://localhost:{config.WEB_PORT}"}
+
+    @app.before_request
+    def _same_machine_only():
+        # Binding to 127.0.0.1 doesn't stop DNS rebinding (a site whose name resolves to 127.0.0.1)
+        # or a cross-site form POST, so check the Host header and, on POSTs, the Origin
+        if request.host not in hosts:
+            abort(403)
+        origin = request.headers.get("Origin")
+        if request.method == "POST" and origin is not None and origin not in origins:
+            abort(403)
 
     @app.context_processor
     def _spend():
@@ -52,6 +64,7 @@ def create_app(db_factory=_thread_conn, claude_factory=Claude.from_config) -> Fl
         digest = latest_digest(conn)
         return render_template("index.html", page="overview", scan=latest_scan(conn), services=services,
                                not_up=[s for s in services if s["state"] in ("degraded", "down")],
+                               no_data=[s for s in services if s["state"] == "no_data"],
                                digest=digest, top=(digest["entries"][:3] if digest else []))
 
     @app.get("/scan")

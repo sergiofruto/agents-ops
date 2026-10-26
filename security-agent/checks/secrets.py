@@ -78,13 +78,24 @@ def _is_candidate(name: str) -> bool:
             or name.endswith((".pem", ".key")) or name.startswith("credentials"))
 
 
-def _read(path: Path, limit: int, lenient: bool = False) -> str | None:
+def _read(path: Path, limit: int, lenient: bool = False) -> tuple[str | None, str | None]:
+    """(text, None) or (None, why it couldn't be read). Only regular files are opened:
+    a named pipe (1Password's .env, for example) would block the read forever."""
     try:
-        if path.stat().st_size > limit:
-            return None
-        return path.read_text(errors="replace" if lenient else "strict")
-    except (OSError, UnicodeDecodeError):
-        return None
+        st = path.stat()
+        if not stat.S_ISREG(st.st_mode):
+            return None, "not a regular file"
+        if st.st_size > limit:
+            return None, "too large"
+        with open(path, "rb") as f:
+            raw = f.read(limit + 1)
+        return raw.decode("utf-8", errors="replace" if lenient else "strict"), None
+    except PermissionError:
+        return None, "permission denied"
+    except UnicodeDecodeError:
+        return None, "binary"
+    except OSError as exc:
+        return None, type(exc).__name__
 
 
 def _other_readable(path: Path) -> bool:
@@ -129,9 +140,13 @@ def scan_secrets(projects_root: Path, home: Path) -> CheckResult:
     res = CheckResult("secrets")
     git = _Git()
     expected: list[str] = []
+    unchecked: list[str] = []
 
     def consider(path: Path, *, in_project: bool, shell_history: bool = False):
-        text = _read(path, MAX_HISTORY_BYTES if shell_history else MAX_BYTES, lenient=shell_history)
+        text, why = _read(path, MAX_HISTORY_BYTES if shell_history else MAX_BYTES, lenient=shell_history)
+        if why:
+            unchecked.append(f"{os.path.relpath(path, home)} ({why})")
+            return
         if not text:
             return
         hits = find_secrets(text)
@@ -148,7 +163,10 @@ def scan_secrets(projects_root: Path, home: Path) -> CheckResult:
             res.findings.append(_finding(reason, rel, hits, classify(hits, **flags)))
 
     if projects_root.is_dir():
-        for dirpath, dirnames, filenames in os.walk(projects_root):
+        def walk_error(err: OSError):
+            unchecked.append(f"{os.path.relpath(err.filename, home)} (folder: {type(err).__name__})")
+
+        for dirpath, dirnames, filenames in os.walk(projects_root, onerror=walk_error):
             dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
             for name in sorted(filenames):
                 if _is_candidate(name):
@@ -187,6 +205,8 @@ def scan_secrets(projects_root: Path, home: Path) -> CheckResult:
             f"{len(expected)} file(s): " + ", ".join(expected),
             "Keeping keys in a git-ignored .env file is the normal setup for local projects.",
             ["Nothing to do. Keep .env in .gitignore and rotate a key if a file is ever shared."]))
-    if not any(f.severity != "info" for f in res.findings):
+    if unchecked:
+        res.skipped.append(f"Secrets: couldn't check {len(unchecked)} file(s): " + ", ".join(unchecked))
+    elif not any(f.severity != "info" for f in res.findings):
         res.passed.append("Secrets: no exposed secrets found")
     return res
