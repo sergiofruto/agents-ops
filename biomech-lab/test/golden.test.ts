@@ -15,11 +15,12 @@ type Fixture = { sample: string; width: number; height: number; people: RawLandm
  * Documented expected score ranges for Sergio's sample photos.
  * Recorded on first extraction as observed score ± 5 (see Task 10, Step 7).
  * tree re-recorded after Task 10b (footOffKnee measures the heel–toe span).
+ * All three re-recorded 2026-10-26 after the sample photos were replaced.
  */
 const EXPECTED: Record<PoseId, { min: number; max: number }> = {
-  warrior2: { min: 45, max: 55 },
-  tree: { min: 50, max: 60 },
-  downdog: { min: 41, max: 51 },
+  warrior2: { min: 61, max: 71 },
+  tree: { min: 58, max: 68 },
+  downdog: { min: 67, max: 77 },
 };
 
 const load = (id: PoseId): Fixture => {
