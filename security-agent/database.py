@@ -72,6 +72,26 @@ CREATE TABLE IF NOT EXISTS ai_usage (
     output_tokens INTEGER NOT NULL,
     cost_usd      REAL NOT NULL
 );
+-- What Solaris syncs to Turso: counts and one title, never evidence or paths.
+DROP VIEW IF EXISTS solaris_summary;
+CREATE VIEW solaris_summary AS
+WITH last_scan AS (SELECT id, finished_at FROM scans WHERE status = 'done' ORDER BY id DESC LIMIT 1),
+     f AS (SELECT severity, title, rowid FROM findings WHERE scan_id = (SELECT id FROM last_scan)),
+     latest_status AS (
+         SELECT s.state FROM status_checks s
+         WHERE s.checked_at = (SELECT MAX(checked_at) FROM status_checks WHERE service = s.service))
+SELECT 1 AS id,
+       (SELECT finished_at FROM last_scan) AS last_scan_at,
+       (SELECT COUNT(*) FROM f WHERE severity = 'high') AS high,
+       (SELECT COUNT(*) FROM f WHERE severity = 'medium') AS medium,
+       (SELECT COUNT(*) FROM f WHERE severity = 'low') AS low,
+       (SELECT COUNT(*) FROM f WHERE severity = 'info') AS info,
+       (SELECT title FROM f ORDER BY CASE severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1
+                                                   WHEN 'low' THEN 2 ELSE 3 END, rowid LIMIT 1) AS worst_title,
+       (SELECT COUNT(*) FROM latest_status WHERE state IN ('degraded', 'down')) AS providers_not_up,
+       (SELECT COUNT(*) FROM digest_entries
+         WHERE digest_id = (SELECT MAX(id) FROM digests) AND affects_json NOT IN ('[]', '')) AS digest_affecting,
+       strftime('%Y-%m-%dT%H:%M:%S', 'now', 'localtime') AS updated_at;
 """
 
 
