@@ -1,0 +1,10 @@
+COMMAND     PID USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+rapportd    645 user    8u  IPv4 0x1a2b3c4d5e6f7a80      0t0  TCP *:49527 (LISTEN)
+rapportd    645 user    9u  IPv6 0x1a2b3c4d5e6f7a81      0t0  TCP *:49527 (LISTEN)
+ControlCe   612 user   10u  IPv4 0x1a2b3c4d5e6f7a82      0t0  TCP *:7000 (LISTEN)
+Google     4954 user   46u  IPv6 0x1a2b3c4d5e6f7a83      0t0  TCP [::1]:7679 (LISTEN)
+OneDrive   5117 user   21u  IPv6 0x1a2b3c4d5e6f7a84      0t0  TCP [::1]:42050 (LISTEN)
+Python     4242 user    5u  IPv4 0x1a2b3c4d5e6f7a85      0t0  TCP *:5000 (LISTEN)
+node        777 user   20u  IPv4 0x1a2b3c4d5e6f7a86      0t0  TCP 127.0.0.1:3000 (LISTEN)
+node        778 user   21u  IPv6 0x1a2b3c4d5e6f7a87      0t0  TCP [::1]:3001 (LISTEN)
+python3.1 55705 user    6u  IPv4 0x1a2b3c4d5e6f7a88      0t0  TCP *:5001 (LISTEN)

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Overview</h1>
+<div class="grid">
+  <div class="card">
+    <div class="muted">Mac check</div>
+    {% if scan %}
+      <div class="big">{{ scan.counts.high }} <span class="tag sev-high">high</span> {{ scan.counts.medium }} <span class="tag sev-medium">medium</span></div>
+      <div class="muted mono">last scan {{ scan.finished_at[:16].replace('T', ' ') }}</div>
+    {% else %}
+      <div class="big">No scan yet</div><a href="/scan">Run the first scan</a>
+    {% endif %}
+  </div>
+  <div class="card">
+    <div class="muted">Providers</div>
+    {% if not_up %}
+      <div class="big state-degraded">{{ not_up|length }} not up</div>
+      <div class="muted">{{ not_up|map(attribute='name')|join(', ') }}</div>
+    {% elif no_data|length == services|length and services|selectattr('checked_at')|list %}
+      <div class="big">Offline / no data</div>
+      <div class="muted">{{ (services|selectattr('incident')|first).incident }}</div>
+    {% elif no_data|length == services|length %}
+      <div class="big">No data yet</div>
+    {% elif no_data %}
+      <div class="big state-up">{{ services|length - no_data|length }} up</div>
+      <div class="muted">No data: {{ no_data|map(attribute='name')|join(', ') }}</div>
+    {% else %}
+      <div class="big state-up">All up</div>
+    {% endif %}
+  </div>
+  <div class="card">
+    <div class="muted">Digest</div>
+    {% if digest %}
+      <div class="big">{{ digest.entries|length }} items</div>
+      <div class="muted">{{ digest.entries|selectattr('affects')|list|length }} affect you</div>
+    {% else %}
+      <div class="big">Not built yet</div><div class="muted">Builds daily from 07:00</div>
+    {% endif %}
+  </div>
+</div>
+
+{% if scan and scan.findings and scan.findings[0].severity in ('high', 'medium') %}
+<h2>Deal with first</h2>
+<div class="card">
+  <strong>{{ scan.findings[0].title }}</strong><span class="tag sev-{{ scan.findings[0].severity }}">{{ scan.findings[0].severity }}</span>
+  <div class="muted mono">{{ scan.findings[0].evidence }}</div>
+  <a href="/scan">See how to fix it</a>
+</div>
+{% endif %}
+
+{% if top %}
+<h2>Top of today's digest</h2>
+{% for e in top %}
+<div class="card">
+  <strong>{{ e.title }}</strong>{% if e.affects %}<span class="tag affects">affects you</span>{% endif %}{% if e.kev %}<span class="tag kev">exploited</span>{% endif %}
+  {% if e.summary %}<div class="muted">{{ e.summary }}</div>{% endif %}
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

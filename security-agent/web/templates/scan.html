@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Mac check</h1>
+<div class="card" style="display:flex;align-items:center;gap:16px">
+  <button id="scan-btn" {{ 'disabled' if running }}>{{ 'Scanning…' if running else 'Scan now' }}</button>
+  <span class="muted">{% if scan %}Last scan {{ scan.finished_at[:16].replace('T', ' ') }}. {% endif %}Read-only: nothing on your Mac is changed.</span>
+</div>
+
+{% if not scan %}
+  <p class="muted">No scan yet. A scan takes about a minute; checking for macOS updates is the slow part.</p>
+{% else %}
+  {% if scan.overview %}
+  <h2>Analyst's take</h2>
+  <div class="card">{{ scan.overview }}</div>
+  {% endif %}
+
+  {% for sev in ('high', 'medium', 'low', 'info') %}
+    {% set group = scan.findings|selectattr('severity', 'equalto', sev)|list %}
+    {% if group %}
+    <h2>{{ sev }} ({{ group|length }})</h2>
+    {% for f in group %}
+    <div class="card">
+      <strong>{{ f.title }}</strong><span class="tag sev-{{ sev }}">{{ sev }}</span>{% if f.is_new %}<span class="tag new">new</span>{% endif %}
+      <div class="mono muted" style="margin:4px 0">{{ f.key }}</div>
+      <div class="mono">{{ f.evidence }}</div>
+      <p class="muted">{{ f.explanation }}</p>
+      <div><strong>How to fix it</strong>
+        <ol>{% for step in f.fix %}<li>{{ step }}</li>{% endfor %}</ol>
+      </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+  {% endfor %}
+
+  <h2>Passed</h2>
+  <div class="card"><ul>{% for p in scan.passed %}<li class="state-up">{{ p }}</li>{% else %}<li class="muted">None</li>{% endfor %}</ul></div>
+  {% if scan.skipped %}
+  <h2>Couldn't check</h2>
+  <div class="card"><ul>{% for s in scan.skipped %}<li class="muted">{{ s }}</li>{% endfor %}</ul></div>
+  {% endif %}
+{% endif %}
+{% endblock %}

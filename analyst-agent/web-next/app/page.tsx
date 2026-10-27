@@ -81,12 +81,6 @@ export default async function DashboardPage() {
             Signals: <strong style={{ color: "var(--foreground)" }}>{status.stats.total_signals}</strong>
           </span>
           <span style={{ color: "var(--muted-foreground)" }}>
-            CVEs: <strong style={{ color: "var(--foreground)" }}>{status.stats.total_cves}</strong>
-            {status.stats.kev_cves > 0 && (
-              <span style={{ color: "oklch(0.78 0.18 40)" }}> ({status.stats.kev_cves} KEV)</span>
-            )}
-          </span>
-          <span style={{ color: "var(--muted-foreground)" }}>
             Briefs: <strong style={{ color: "var(--foreground)" }}>{status.stats.total_briefs}</strong>
           </span>
           {status.latest_brief && (

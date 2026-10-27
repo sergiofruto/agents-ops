@@ -4,7 +4,7 @@ The Analyst — Orchestrator
 "Nothing rests; everything moves; everything vibrates." — The Kybalion
 
 Three background threads:
-  • intel_thread  — OSINT + infosec scans  (every INTEL_INTERVAL_MINUTES)
+  • intel_thread  — OSINT scans            (every INTEL_INTERVAL_MINUTES)
   • cosmic_thread — sky calculations        (every COSMIC_INTERVAL_MINUTES)
   • brief_thread  — synthesis + publish     (every BRIEF_INTERVAL_MINUTES)
 
@@ -22,7 +22,7 @@ import schedule
 
 import config
 import database
-from intelligence import infosec, osint, cosmic
+from intelligence import osint, cosmic
 import synthesis
 import reporter
 
@@ -66,7 +66,6 @@ def _run_intel():
     logger.info("=== INTEL CYCLE STARTED ===")
     try:
         osint.run_osint_scan()
-        infosec.run_infosec_scan()
     except Exception as exc:
         logger.exception("Intel cycle failed: %s", exc)
     logger.info("=== INTEL CYCLE DONE ===")

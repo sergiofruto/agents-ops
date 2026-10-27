@@ -1,0 +1,6 @@
+{"title": "CISA Catalog of Known Exploited Vulnerabilities", "catalogVersion": "2026.10.24", "count": 3,
+ "vulnerabilities": [
+  {"cveID": "CVE-2026-1234", "vendorProject": "Google", "product": "Chromium V8", "vulnerabilityName": "Google Chromium V8 Type Confusion Vulnerability", "dateAdded": "2026-10-24", "shortDescription": "Type confusion in V8 allows remote code execution via a crafted HTML page.", "requiredAction": "Apply mitigations per vendor instructions.", "dueDate": "2026-11-14"},
+  {"cveID": "CVE-2026-5678", "vendorProject": "Apple", "product": "macOS", "vulnerabilityName": "Apple Multiple Products WebKit Use-After-Free", "dateAdded": "2026-10-23", "shortDescription": "WebKit use-after-free allows code execution.", "requiredAction": "Apply updates.", "dueDate": "2026-11-13"},
+  {"cveID": "CVE-2025-0001", "vendorProject": "Old", "product": "Thing", "vulnerabilityName": "Old bug", "dateAdded": "2025-01-01", "shortDescription": "Old.", "requiredAction": "Patch.", "dueDate": "2025-02-01"}
+ ]}

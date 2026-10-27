@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Security Agent</title>
+  <style>
+    :root {
+      --bg: #0d0f12; --panel: #15181d; --line: #262b33; --text: #e6e8eb; --muted: #8b93a1;
+      --high: #f05252; --medium: #f59e0b; --low: #60a5fa; --info: #6b7280; --ok: #34d399; --accent: #a78bfa;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Inter", sans-serif; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .layout { display: grid; grid-template-columns: 1fr 360px; min-height: 100vh; }
+    main { padding: 24px 32px; max-width: 980px; }
+    nav { display: flex; gap: 20px; align-items: baseline; margin-bottom: 24px; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+    nav .brand { font-weight: 700; margin-right: 12px; }
+    nav a { color: var(--muted); }
+    nav a.on { color: var(--text); font-weight: 600; }
+    nav .spend { margin-left: auto; color: var(--muted); font-size: 12px; font-family: ui-monospace, monospace; }
+    h1 { font-size: 20px; margin: 0 0 16px; }
+    h2 { font-size: 15px; margin: 24px 0 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+    .muted { color: var(--muted); }
+    .mono { font-family: ui-monospace, monospace; font-size: 12px; }
+    .tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 99px; border: 1px solid var(--line); margin-left: 6px; }
+    .sev-high { color: var(--high); border-color: var(--high); } .sev-medium { color: var(--medium); border-color: var(--medium); }
+    .sev-low { color: var(--low); border-color: var(--low); } .sev-info { color: var(--info); border-color: var(--info); }
+    .tag.new { color: var(--accent); border-color: var(--accent); }
+    .tag.affects { color: var(--medium); border-color: var(--medium); } .tag.kev { color: var(--high); border-color: var(--high); }
+    .state-up { color: var(--ok); } .state-degraded { color: var(--medium); } .state-down { color: var(--high); }
+    .state-unknown, .state-no_data { color: var(--muted); }
+    .big { font-size: 26px; font-weight: 700; }
+    button { background: var(--accent); color: #0d0f12; border: 0; border-radius: 8px; padding: 8px 14px; font-weight: 600; cursor: pointer; }
+    button:disabled { opacity: .5; cursor: default; }
+    ol, ul { margin: 6px 0 0; padding-left: 20px; }
+    .bar { display: flex; gap: 1px; margin-top: 6px; }
+    .cell { flex: 1; height: 14px; border-radius: 1px; background: var(--line); }
+    .cell.up { background: var(--ok); } .cell.degraded { background: var(--medium); } .cell.down { background: var(--high); }
+    .cell.unknown { background: #4b5563; }
+    aside { border-left: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; height: 100vh; position: sticky; top: 0; }
+    aside header { padding: 16px; border-bottom: 1px solid var(--line); font-weight: 600; }
+    #chat-log { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+    .msg { padding: 8px 12px; border-radius: 10px; white-space: pre-wrap; }
+    .msg.user { background: #1f2430; align-self: flex-end; max-width: 85%; }
+    .msg.assistant { background: #11141a; border: 1px solid var(--line); }
+    #chat-form { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--line); }
+    #chat-input { flex: 1; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px; font: inherit; resize: none; }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } aside { height: 60vh; position: static; } main { padding: 16px; } }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <main>
+    <nav>
+      <span class="brand">Security Agent</span>
+      <a href="/" class="{{ 'on' if page == 'overview' }}">Overview</a>
+      <a href="/scan" class="{{ 'on' if page == 'scan' }}">Mac check</a>
+      <a href="/digest" class="{{ 'on' if page == 'digest' }}">Digest</a>
+      <a href="/status" class="{{ 'on' if page == 'status' }}">Status</a>
+      <span class="spend">AI today ${{ '%.2f' % ai_spent }} / ${{ '%.2f' % ai_cap }}</span>
+    </nav>
+    {% block content %}{% endblock %}
+  </main>
+  <aside>
+    <header>Ask the analyst</header>
+    <div id="chat-log">
+      <div class="msg assistant">Ask about your scan, today's digest, provider status or a CVE.</div>
+    </div>
+    <form id="chat-form">
+      <textarea id="chat-input" rows="2" maxlength="4000" placeholder="Is any open port a problem?"></textarea>
+      <button type="submit">Ask</button>
+    </form>
+  </aside>
+</div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

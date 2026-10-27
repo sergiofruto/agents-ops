@@ -1,7 +1,7 @@
 """
 synthesis.py — The Analyst's unified prediction engine
 =======================================================
-Takes raw signals (infosec, OSINT, cosmic) and produces a structured
+Takes raw signals (OSINT, cosmic; security news now lives in security-agent) and produces a structured
 brief in The Analyst's voice.
 
 The brief follows a fixed schema:
